@@ -1,22 +1,29 @@
-# GW2 Boss Timer Plugin
+# GW2 Boss Timer
 
-> [!CAUTION]
-> The code of this plugin is 99% written by AI!
+> **In a nutshell**
+> Never miss a Guild Wars 2 world boss again. This DankMaterialShell widget shows the next world boss and a live countdown right in your DankBar. Click it for the full daily schedule, right-click to copy the waypoint link and paste it into the in-game chat.
 
-A DankMaterialShell plugin that displays Guild Wars 2 world boss spawn timers in your shell bar.
+> [!NOTE]
+> **About this code:** this plugin was written almost entirely with AI assistance. As with any third-party code, feel free to have a look at it before you run it.
+
+## Contents
+
+- [Features](#features)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Good to know](#good-to-know)
+- [Development](#development)
+- [Sources](#sources)
 
 ## Features
 
-- 📊 Shows next upcoming world boss spawn(s) in the bar
-- ⏱️ Real-time countdown timer (HH:MM or MM:SS format)
-- 🔄 Supports dual boss spawns - displays both names with slash separator
-- 📋 Click to view complete world boss schedule popup
-- 🔗 Right-click to copy waypoint link to clipboard
-  - On widget: cycles through waypoints if multiple bosses spawn simultaneously
-  - On popout entries: copies that specific boss's waypoint
-- 🌍 All times displayed in CET (Central European Time, UTC+1)
-- 🎨 Color differentiation - hardcore bosses shown in warning color (orange/yellow)
-- 🔄 Automatic timer updates every second
+- 📊 Shows the next upcoming world boss spawn(s) in the bar
+- ⏱️ Live countdown timer (HH:MM or MM:SS), updated every second
+- 🔄 Dual spawns are displayed as `Boss1 / Boss2`
+- 📋 Click to open the complete daily world boss schedule
+- 🔗 Right-click to copy the waypoint link to the clipboard
+- 🎨 Hardcore bosses are highlighted in the warning color (orange/yellow)
+- 🌍 All times in CET (Central European Time, UTC+1)
 
 ## Installation
 
@@ -29,7 +36,7 @@ dms plugins install gw2BossTimer
 
 Then:
 
-1. Open DankMaterialShell Settings → Plugins and toggle "GW2 Boss Timer" on
+1. Open DankMaterialShell **Settings → Plugins** and toggle "GW2 Boss Timer" on
 2. Add it to your DankBar widget list in the bar settings
 3. Restart the shell with `dms restart` if the widget does not show up
 
@@ -37,68 +44,48 @@ See the [repository README](../README.md#installation) for manual installation.
 
 ## Usage
 
-### Bar Widget
-- **Left Click**: Opens the full world boss schedule popup
-- **Right Click**: Copies the next boss's waypoint link to clipboard
-  - If multiple bosses spawn at the same time, right-click cycles through them
+### Bar widget
 
-### Widget Display
-- Shows the schedule icon and next boss name(s)
-- For dual spawns, displays: "Boss1 / Boss2"
-- Hardcore bosses (Tequatl, Jungle Wurm, Karka Queen) are highlighted in orange
+| Action | Effect |
+|--------|--------|
+| **Left click** | Opens the full world boss schedule popup |
+| **Right click** | Copies the next boss's waypoint link to the clipboard. If multiple bosses spawn at the same time, each right-click cycles to the next one |
 
-### Schedule Popup
+The widget shows the schedule icon and the name(s) of the next boss. Hardcore bosses (Tequatl, Jungle Wurm, Karka Queen) are highlighted in orange.
+
+### Schedule popup
+
 - Lists all world bosses in today's spawn order (96 entries covering 24 hours)
-- Shows spawn time in CET for each boss
-- Next upcoming boss is highlighted with a blue border
+- Shows the spawn time in CET for each boss
+- The next upcoming boss is highlighted with a blue border
 - Boss names are color-coded (orange for hardcore, white for normal)
-- **Right Click** on any boss entry: Copies that boss's waypoint link
+- **Right click** on any entry copies that boss's waypoint link
 
-### Waypoint Links
-The plugin includes waypoint codes for each boss. When you copy a waypoint link, you can paste it in-game chat and click it to be transported to that location.
+### Waypoint links
 
-## Technical Details
+Every boss comes with its waypoint code. Paste the copied link into the in-game chat and click it to travel straight to the spawn location.
 
-### Schedule
-The world bosses follow a complete 24-hour rotation with 96 total spawn entries. The schedule includes:
-- All 11 standard world bosses
-- 3 hardcore world bosses (Tequatl the Sunless, Evolved Jungle Wurm, Karka Queen)
-- Complete timing for all 24 hours
+## Good to know
 
-### Hardcore Bosses
-Displayed in orange/warning color:
-- **Tequatl the Sunless** - Sparkfly Fen
-- **Evolved Jungle Wurm** - Bloodtide Coast  
-- **Karka Queen** - Southsun Cove
-
-### Timezone
-All times are in **CET (Central European Time, UTC+1)**. The plugin uses your system's local timezone, so if you're in a different timezone, adjust the times accordingly.
-
-## Files
-
-- `plugin.json` - Plugin metadata and configuration
-- `Widget.qml` - Main widget component with bar display and popout
-- `Settings.qml` - Settings/information panel
-- `README.md` - This file
+- **Schedule:** the plugin covers the full 24-hour rotation with 96 spawn entries: all 11 standard world bosses plus the 3 hardcore bosses. The schedule is the same on all Guild Wars 2 servers, and each boss stays up for roughly 15 minutes.
+- **Hardcore bosses** (shown in orange): Tequatl the Sunless (Sparkfly Fen), Evolved Jungle Wurm (Bloodtide Coast), Karka Queen (Southsun Cove).
+- **Timezone:** all times are in CET (UTC+1). The plugin uses your system's local timezone, so adjust the times accordingly if you live elsewhere.
+- **Official timer:** type `/wiki wb` in the in-game chat for the wiki's boss timer.
 
 ## Development
 
-To test changes during development, use:
+| File | Purpose |
+|------|---------|
+| `plugin.json` | Plugin metadata and configuration |
+| `Widget.qml` | Main widget component with bar display and popout |
+| `Settings.qml` | Settings/information panel |
+
+Hot-reload the plugin without restarting the shell:
 
 ```bash
 dms ipc call plugins reload gw2BossTimer
 ```
 
-This hot-reloads the plugin without restarting the shell.
+## Sources
 
-## Notes
-
-- Times are in CET - adjust mentally for your timezone if different
-- Each boss spawns for approximately 15 minutes
-- The schedule is synchronized across all servers in Guild Wars 2
-- For the official in-game timer, type `/wiki wb` in chat
-- The plugin updates every second for accurate countdown display
-
-## Source
-
-World boss schedule data from: [GW2 Wiki - World Boss](https://wiki.guildwars2.com/wiki/World_boss)
+World boss schedule data from the [GW2 Wiki – World boss](https://wiki.guildwars2.com/wiki/World_boss) page.
