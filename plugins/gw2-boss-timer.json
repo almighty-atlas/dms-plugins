@@ -1,0 +1,13 @@
+{
+    "id": "gw2BossTimer",
+    "name": "GW2 Boss Timer",
+    "capabilities": ["dankbar-widget"],
+    "category": "utilities",
+    "repo": "https://github.com/almighty-atlas/dms-plugins",
+    "path": "GW2BossTimer",
+    "author": "almighty-atlas",
+    "description": "Shows upcoming Guild Wars 2 world boss spawns with timers",
+    "dependencies": [],
+    "compositors": ["any"],
+    "distro": ["any"]
+}

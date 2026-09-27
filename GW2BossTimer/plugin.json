@@ -1,10 +1,12 @@
 {
+  "$schema": "https://github.com/AvengeMedia/DankMaterialShell/raw/refs/heads/master/quickshell/PLUGINS/plugin-schema.json",
   "id": "gw2BossTimer",
   "name": "GW2 Boss Timer",
   "description": "Shows upcoming Guild Wars 2 world boss spawns with timers",
   "version": "1.0.0",
-  "author": "Your Name",
+  "author": "almighty-atlas",
   "type": "widget",
+  "capabilities": ["dankbar-widget"],
   "component": "./Widget.qml",
   "settings": "./Settings.qml",
   "icon": "schedule",

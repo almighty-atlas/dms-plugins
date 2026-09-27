@@ -1,101 +1,69 @@
-# GW2 Boss Timer Plugin
+# DMS Plugins
+
+A collection of plugins for [DankMaterialShell](https://github.com/AvengeMedia/DankMaterialShell).
 
 > [!CAUTION]
-> The code of this plugin is 99% written by AI!
+> Large parts of the plugin code in this repository are written by AI. Read the code before you run it.
 
-A DankMaterialShell plugin that displays Guild Wars 2 world boss spawn timers in your shell bar.
+This repository is both a **plugin monorepo** (each plugin lives in its own directory) and a **DMS plugin registry** (the `plugins/` directory holds one registry entry per plugin). Adding it as a registry lets DMS browse, install and update the plugins directly.
 
-## Features
+## Plugins
 
-- 📊 Shows next upcoming world boss spawn(s) in the bar
-- ⏱️ Real-time countdown timer (HH:MM or MM:SS format)
-- 🔄 Supports dual boss spawns - displays both names with slash separator
-- 📋 Click to view complete world boss schedule popup
-- 🔗 Right-click to copy waypoint link to clipboard
-  - On widget: cycles through waypoints if multiple bosses spawn simultaneously
-  - On popout entries: copies that specific boss's waypoint
-- 🌍 All times displayed in CET (Central European Time, UTC+1)
-- 🎨 Color differentiation - hardcore bosses shown in warning color (orange/yellow)
-- 🔄 Automatic timer updates every second
+| Plugin | ID | Description |
+|--------|----|-------------|
+| [GW2 Boss Timer](./GW2BossTimer) | `gw2BossTimer` | Shows upcoming Guild Wars 2 world boss spawns with timers in the DankBar |
 
 ## Installation
 
-1. The plugin is already in: `~/.config/DankMaterialShell/plugins/GW2BossTimer`
+### As a registry (recommended, DMS >= 1.6)
 
-2. Open DankMaterialShell Settings → Plugins
+Add this repository as an additional registry once, then install plugins by ID:
 
-3. Click "Scan for Plugins"
+```bash
+dms registry add atlas https://github.com/almighty-atlas/dms-plugins
+dms plugins install gw2BossTimer
+```
 
-4. Toggle "GW2 Boss Timer" on
+Alternatively use **Settings → Plugins → Registries** in the DMS settings UI.
 
-5. Add it to your DankBar widget list in the bar settings
+Updates are handled by `dms plugins update` like for any other registry plugin.
 
-6. Restart shell with: `dms restart`
+### Manually
 
-## Usage
+Clone the repository and symlink (or copy) the plugin directory you want into your DMS plugins folder:
 
-### Bar Widget
-- **Left Click**: Opens the full world boss schedule popup
-- **Right Click**: Copies the next boss's waypoint link to clipboard
-  - If multiple bosses spawn at the same time, right-click cycles through them
+```bash
+git clone https://github.com/almighty-atlas/dms-plugins ~/.config/DankMaterialShell/plugins/.repos/dms-plugins
+ln -s ~/.config/DankMaterialShell/plugins/.repos/dms-plugins/GW2BossTimer ~/.config/DankMaterialShell/plugins/GW2BossTimer
+dms restart
+```
 
-### Widget Display
-- Shows the schedule icon and next boss name(s)
-- For dual spawns, displays: "Boss1 / Boss2"
-- Hardcore bosses (Tequatl, Jungle Wurm, Karka Queen) are highlighted in orange
+## Repository layout
 
-### Schedule Popup
-- Lists all world bosses in today's spawn order (96 entries covering 24 hours)
-- Shows spawn time in CET for each boss
-- Next upcoming boss is highlighted with a blue border
-- Boss names are color-coded (orange for hardcore, white for normal)
-- **Right Click** on any boss entry: Copies that boss's waypoint link
+```
+.
+├── plugins/                 # registry entries (one JSON file per plugin)
+│   └── gw2-boss-timer.json
+├── GW2BossTimer/            # plugin sources
+│   ├── plugin.json
+│   ├── Widget.qml
+│   ├── Settings.qml
+│   └── README.md
+└── README.md
+```
 
-### Waypoint Links
-The plugin includes waypoint codes for each boss. When you copy a waypoint link, you can paste it in-game chat and click it to be transported to that location.
+## Adding a new plugin
 
-## Technical Details
+1. Create a new directory `<PluginName>/` with a `plugin.json` and the QML components.
+2. Add a registry entry `plugins/<plugin-name>.json` that points to this repository with `"path": "<PluginName>"`. The `id` and `name` fields must match the plugin's `plugin.json`.
+3. Add the plugin to the table above.
 
-### Schedule
-The world bosses follow a complete 24-hour rotation with 96 total spawn entries. The schedule includes:
-- All 11 standard world bosses
-- 3 hardcore world bosses (Tequatl the Sunless, Evolved Jungle Wurm, Karka Queen)
-- Complete timing for all 24 hours
-
-### Hardcore Bosses
-Displayed in orange/warning color:
-- **Tequatl the Sunless** - Sparkfly Fen
-- **Evolved Jungle Wurm** - Bloodtide Coast  
-- **Karka Queen** - Southsun Cove
-
-### Timezone
-All times are in **CET (Central European Time, UTC+1)**. The plugin uses your system's local timezone, so if you're in a different timezone, adjust the times accordingly.
-
-## Files
-
-- `plugin.json` - Plugin metadata and configuration
-- `Widget.qml` - Main widget component with bar display and popout
-- `Settings.qml` - Settings/information panel
-- `README.md` - This file
+The registry entry format is documented in the [official registry's contribution guide](https://github.com/AvengeMedia/dms-plugin-registry/blob/master/CONTRIBUTING.md); the `plugin.json` format in the [DMS plugin development docs](https://danklinux.com/docs/dankmaterialshell/plugin-development).
 
 ## Development
 
-To test changes during development, use:
+Hot-reload a plugin without restarting the shell:
 
 ```bash
-dms ipc call plugins reload gw2BossTimer
+dms ipc call plugins reload <pluginId>
 ```
-
-This hot-reloads the plugin without restarting the shell.
-
-## Notes
-
-- Times are in CET - adjust mentally for your timezone if different
-- Each boss spawns for approximately 15 minutes
-- The schedule is synchronized across all servers in Guild Wars 2
-- For the official in-game timer, type `/wiki wb` in chat
-- The plugin updates every second for accurate countdown display
-
-## Source
-
-World boss schedule data from: [GW2 Wiki - World Boss](https://wiki.guildwars2.com/wiki/World_boss)
