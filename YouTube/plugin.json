@@ -2,7 +2,7 @@
   "id": "youtubeSearch",
   "name": "YouTube Search",
   "description": "Search YouTube in DMS and open videos in a browser or mpv",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "author": "almighty-atlas",
   "type": "widget",
   "capabilities": [
