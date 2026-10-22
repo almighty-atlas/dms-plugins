@@ -70,3 +70,21 @@ echo "Exit-Code: $?"
 If the command exits with 0 but the plugin fails, inspect DMS shell logs for
 `youtubeSearch:` messages and report the error text from the popout. A failed
 process now reports its exit code separately from a 30-second callback timeout.
+
+## Process launch compatibility (0.1.2)
+
+Some Quickshell configurations log a failed start when launching the bare
+`yt-dlp` command, even though the command works in an interactive shell and the
+binary directory is in Quickshell's PATH. The plugin now launches
+`/usr/bin/env yt-dlp ...` without a shell. If `yt-dlp` cannot be found or
+executed, `env` exits with status 127 or 126 respectively, which the plugin
+reports instead of only showing a callback timeout. These exit codes cannot
+explain every potential failure, but make that failure mode diagnosable.
+
+DMS Proc defaults to an internal 10-second timeout; this plugin explicitly
+uses 25 seconds for the child process and keeps its 30-second UI watchdog.
+Each search has its own process ID and is owned by the plugin instance, avoiding
+cross-instance callback replacement when the widget appears more than once.
+
+If `/usr/bin/env` itself cannot start, capture the Quickshell log with
+`qs log --pid (pgrep -u (id -u) -x qs | head -n 1) --tail 120` (Fish syntax).
