@@ -2,12 +2,19 @@
   "id": "youtubeSearch",
   "name": "YouTube Search",
   "description": "Search YouTube in DMS and open videos in a browser or mpv",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "author": "almighty-atlas",
   "type": "widget",
-  "capabilities": ["dankbar-widget"],
+  "capabilities": [
+    "dankbar-widget"
+  ],
   "component": "./Widget.qml",
   "icon": "smart_display",
-  "dependencies": ["yt-dlp"],
-  "permissions": ["network", "process"]
+  "dependencies": [
+    "yt-dlp"
+  ],
+  "permissions": [
+    "network",
+    "process"
+  ]
 }
