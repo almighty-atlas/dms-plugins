@@ -6,7 +6,7 @@
   "repo": "https://github.com/almighty-atlas/dms-plugins",
   "path": "YouTube",
   "author": "almighty-atlas",
-  "description": "Search YouTube from the bar and open results in browser or mpv",
+  "description": "Local YouTube search, saved videos, history and mpv video/audio queues",
   "dependencies": ["yt-dlp"],
   "compositors": ["any"],
   "distro": ["any"]
