@@ -55,14 +55,18 @@ PluginComponent {
         // Arguments are passed without a shell, so search text is never evaluated as code.
         var requestId = ++root.searchRequestId
         try {
-            // DMS explicitly recommends Proc.runCommand for one-shot commands.
-            // It owns the process, collects stdout and reports an exit code.
+            // DMS's Qt/Quickshell process launcher could not start bare "yt-dlp"
+            // even though its directory was present in the shell's PATH. Starting
+            // the known system executable /usr/bin/env makes lookup happen in env,
+            // which returns 126/127 instead of leaving a failed-start Process
+            // without an exited signal or callback.
+            // Arguments are passed directly (no shell, no command injection).
             Proc.runCommand(
-                "youtubeSearch.search",
+                null,
                 [
-                    "yt-dlp", "--ignore-config", "--flat-playlist", "--dump-single-json",
-                    "--no-warnings", "--skip-download", "--socket-timeout", "10",
-                    "ytsearch10:" + query
+                    "/usr/bin/env", "yt-dlp", "--ignore-config", "--flat-playlist",
+                    "--dump-single-json", "--no-warnings", "--skip-download",
+                    "--socket-timeout", "10", "ytsearch10:" + query
                 ],
                 (output, exitCode) => {
                     // Discard stale responses, especially after a timeout/retry.
@@ -71,14 +75,22 @@ PluginComponent {
                     searchTimeout.stop()
                     root.loading = false
                     if (exitCode !== 0) {
-                        root.errorMessage = "yt-dlp fehlgeschlagen (Exit-Code " + exitCode +
-                            "). Bitte DMS-Logs und die yt-dlp-Installation prüfen."
+                        if (exitCode === 127)
+                            root.errorMessage = "yt-dlp wurde in der DMS-Umgebung nicht gefunden (Exit-Code 127)."
+                        else if (exitCode === 126)
+                            root.errorMessage = "yt-dlp wurde gefunden, konnte aber nicht gestartet werden (Exit-Code 126)."
+                        else if (exitCode === 124)
+                            root.errorMessage = "yt-dlp hat das interne Zeitlimit von 25 Sekunden überschritten."
+                        else
+                            root.errorMessage = "yt-dlp fehlgeschlagen (Exit-Code " + exitCode + ")."
                         console.warn("youtubeSearch: yt-dlp exited with code", exitCode)
                         return
                     }
                     root.consumeResults(output)
                 },
-                0
+                0,
+                25000,
+                root
             )
         } catch (err) {
             searchTimeout.stop()
