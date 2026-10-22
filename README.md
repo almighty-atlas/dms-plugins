@@ -1,7 +1,7 @@
 # DMS Plugins
 
 > **In a nutshell**
-> A small collection of plugins for [DankMaterialShell](https://github.com/AvengeMedia/DankMaterialShell) that you can install straight from the DMS settings. Add this repo as a registry once, then browse, install and update the plugins like any other. Includes a Guild Wars 2 world boss timer and a YouTube search widget for the DankBar.
+> A small collection of plugins for [DankMaterialShell](https://github.com/AvengeMedia/DankMaterialShell) that you can install straight from the DMS settings. Add this repo as a registry once, then browse, install and update the plugins like any other. Includes a Guild Wars 2 world boss timer and a YouTube companion with local lists and audio queues for the DankBar.
 
 > [!NOTE]
 > **About this code:** large parts of the plugins in this repository were written with AI assistance. As with any third-party code, feel free to have a look at it before you run it.
@@ -19,7 +19,7 @@
 | Plugin | ID | Description |
 |--------|----|-------------|
 | [GW2 Boss Timer](./GW2BossTimer) | `gw2BossTimer` | Shows upcoming Guild Wars 2 world boss spawns with countdown timers in the DankBar |
-| [YouTube Search](./YouTube) | `youtubeSearch` | Searches YouTube and opens results in the browser or mpv; requires `yt-dlp` |
+| [YouTube Search](./YouTube) | `youtubeSearch` | Search, local bookmarks/history, and persistent mpv video/audio queues; requires `yt-dlp` |
 
 ## Installation
 
@@ -60,9 +60,13 @@ dms restart
 │   ├── Widget.qml
 │   ├── Settings.qml
 │   └── README.md
-├── YouTube/                 # native video search widget
+├── YouTube/                 # local YouTube companion
 │   ├── plugin.json
 │   ├── Widget.qml
+│   ├── Settings.qml
+│   ├── components/
+│   ├── js/
+│   ├── tests/
 │   └── README.md
 └── README.md
 ```
