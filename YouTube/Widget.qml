@@ -1,6 +1,5 @@
 import QtQuick
 import Quickshell
-import Quickshell.Io
 import qs.Common
 import qs.Widgets
 import qs.Modules.Plugins
@@ -16,6 +15,7 @@ PluginComponent {
     property string errorMessage: ""
     property bool loading: false
     property bool timedOut: false
+    property int searchRequestId: 0
 
     function formattedDuration(seconds) {
         if (typeof seconds !== "number" || !isFinite(seconds) || seconds < 0)
@@ -53,12 +53,39 @@ PluginComponent {
         searchTimeout.restart()
 
         // Arguments are passed without a shell, so search text is never evaluated as code.
-        searchProcess.command = [
-            "yt-dlp", "--ignore-config", "--flat-playlist", "--dump-single-json",
-            "--no-warnings", "--skip-download", "--socket-timeout", "10",
-            "ytsearch10:" + query
-        ]
-        searchProcess.running = true
+        var requestId = ++root.searchRequestId
+        try {
+            // DMS explicitly recommends Proc.runCommand for one-shot commands.
+            // It owns the process, collects stdout and reports an exit code.
+            Proc.runCommand(
+                "youtubeSearch.search",
+                [
+                    "yt-dlp", "--ignore-config", "--flat-playlist", "--dump-single-json",
+                    "--no-warnings", "--skip-download", "--socket-timeout", "10",
+                    "ytsearch10:" + query
+                ],
+                (output, exitCode) => {
+                    // Discard stale responses, especially after a timeout/retry.
+                    if (root.searchRequestId !== requestId || root.timedOut)
+                        return
+                    searchTimeout.stop()
+                    root.loading = false
+                    if (exitCode !== 0) {
+                        root.errorMessage = "yt-dlp fehlgeschlagen (Exit-Code " + exitCode +
+                            "). Bitte DMS-Logs und die yt-dlp-Installation prüfen."
+                        console.warn("youtubeSearch: yt-dlp exited with code", exitCode)
+                        return
+                    }
+                    root.consumeResults(output)
+                },
+                0
+            )
+        } catch (err) {
+            searchTimeout.stop()
+            root.loading = false
+            root.errorMessage = "Suchprozess konnte nicht gestartet werden: " + err
+            console.error("youtubeSearch: Proc.runCommand failed:", err)
+        }
     }
 
     function consumeResults(output) {
@@ -105,28 +132,11 @@ PluginComponent {
             if (!root.loading)
                 return
             root.timedOut = true
-            root.errorMessage = "Zeitüberschreitung. Bitte die Verbindung oder yt-dlp prüfen."
+            ++root.searchRequestId
+            root.errorMessage = "DMS hat innerhalb von 30 Sekunden keine Antwort vom Suchprozess " +
+                "erhalten. Bitte die DMS-Logs prüfen."
+            console.warn("youtubeSearch: no callback from Proc.runCommand within 30 seconds")
             root.loading = false
-            searchProcess.running = false
-        }
-    }
-
-    Process {
-        id: searchProcess
-        stdout: StdioCollector {
-            onStreamFinished: root.consumeResults(text)
-        }
-        // Drain stderr to prevent a subprocess from blocking if it prints errors.
-        stderr: StdioCollector {}
-        onExited: (exitCode, exitStatus) => {
-            searchTimeout.stop()
-            root.loading = false
-            if (root.timedOut)
-                return
-            if (exitCode !== 0 && root.results.length === 0)
-                root.errorMessage = "Suche fehlgeschlagen. Ist yt-dlp installiert und aktuell?"
-            else if (root.results.length === 0 && root.errorMessage === "")
-                root.errorMessage = "Keine Videos gefunden."
         }
     }
 
