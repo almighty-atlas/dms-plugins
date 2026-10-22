@@ -1,0 +1,13 @@
+{
+  "id": "youtubeSearch",
+  "name": "YouTube Search",
+  "capabilities": ["dankbar-widget"],
+  "category": "utilities",
+  "repo": "https://github.com/almighty-atlas/dms-plugins",
+  "path": "YouTube",
+  "author": "almighty-atlas",
+  "description": "Search YouTube from the bar and open results in browser or mpv",
+  "dependencies": ["yt-dlp"],
+  "compositors": ["any"],
+  "distro": ["any"]
+}
