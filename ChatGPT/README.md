@@ -14,7 +14,10 @@ are **not yet verified on CachyOS**. See [TESTING.md](TESTING.md).
 - `Widget.qml`: horizontal/vertical `PluginComponent`, current `DIcon` and
   `StyledText` from `qs.DCommon.Widgets`, scale-aware sizes and native error
   toasts. Left click opens/focuses; right click explains the last error/theme
-  lifecycle. A busy indicator and bounded process watchdog prevent dead UI.
+  lifecycle. Hover does not launch/focus Zen, even if DMS globally enables
+  hover-to-open, preventing a focus/hover loop. A zero-argument click action
+  does not depend on a popup anchor. A busy indicator and bounded process
+  watchdog prevent dead UI.
 - `Settings.qml`: native persisted browser mode, Material theme, Compact Mode,
   and optional follow-the-clicked-monitor settings.
 - `scripts/launcher.py`: short-lived Python operation, argument arrays only,

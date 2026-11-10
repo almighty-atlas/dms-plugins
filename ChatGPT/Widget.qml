@@ -94,7 +94,16 @@ PluginComponent {
         }, 100, 40000, root);
     }
 
-    pillClickAction: (x, y, width, section, screen) => root.openChat(screen)
+    // DMS hover-to-open calls triggerHoverPopout(), which by default forwards
+    // to triggerPopout() and launches pillClickAction even on a mere hover.
+    // Focusing an external Zen window would immediately steal pointer focus
+    // and retrigger hover, producing a launch/focus loop. This action-only
+    // widget intentionally has no hover action and no popout.
+    function triggerHoverPopout() {}
+
+    // A zero-argument click action bypasses PluginComponent.runPillAction's
+    // popout-anchor requirement; opening Zen must not depend on popup geometry.
+    pillClickAction: () => root.openChat(root.parentScreen)
     pillRightClickAction: () => ToastService.showInfo("ChatGPT Web", root.launchError || "Klicken öffnet/fokussiert ChatGPT. Neue DMS-Farben gelten nach vollständigem Beenden und erneutem Öffnen des isolierten Zen-Profils.")
     onPaletteChanged: themeDelay.restart()
     onPluginDataChanged: themeDelay.restart()

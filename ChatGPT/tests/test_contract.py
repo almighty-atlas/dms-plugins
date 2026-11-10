@@ -40,6 +40,14 @@ class ContractTests(unittest.TestCase):
         for key in re.findall(r'settingKey: "(\w+)"', settings):
             self.assertIn(f'setting("{key}"', widget)
 
+    def test_hover_never_launches_external_window(self):
+        widget = (PLUGIN / "Widget.qml").read_text()
+        # DMS's triggerHoverPopout() invokes pillClickAction on hover by default.
+        # Action-only external launchers override the hover path explicitly.
+        self.assertRegex(widget, r"function\s+triggerHoverPopout\s*\(\s*\)\s*\{\s*\}")
+        self.assertIn("pillClickAction: () => root.openChat(root.parentScreen)", widget)
+        self.assertNotIn("pillClickAction: (x, y, width, section, screen)", widget)
+
     def test_niri_rule_exact_identity_only(self):
         rule = (PLUGIN / "niri-window-rule.kdl.example").read_text()
         self.assertIn('app-id=r#"^dms-chatgpt$"#', rule)
