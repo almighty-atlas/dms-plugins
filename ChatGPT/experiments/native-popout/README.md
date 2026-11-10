@@ -707,3 +707,55 @@ opened its bar, communicated with the real backend or maintained
 its plugins. A full isolated startup/reliability test remains
 necessary before any new service switch. The retired
 `SCREENCOPY=OFF` host must never be reactivated.
+
+## New Screencopy host + genuine native DMS popout smoke (offline only)
+
+The user passed the `--entry-probe` against the actual DMS
+`shell.qml` component graph:
+
+```text
+Ran 9 tests ... OK
+DMS_SHELL_ENTRY_QML_TYPE_TREE_READY: YES
+DMS_SHELLCORE_SOURCE_PINNED: YES
+DMS_SHELLCORE_ONLY_COMPILED_NOT_INSTANTIATED
+DMS_SHELLCORE_ISOLATED_XDG_AND_DBUS
+DMS_SHELLCORE_NO_LIVE_DMS_CHANGES
+```
+
+This establishes type-resolution on the pinned DMS source with the
+Screencopy-capable host; **it does not instantiate the full DMS shell
+or prove its runtime readiness**.
+
+Before attempting full DMS runtime in a properly isolated compositor
+and daemon, re-run the already successful **real DMS PluginPopout
+WebEngine** interaction with the **new** Screencopy-enabled host.
+`run_native_popout.sh` gained an explicit mode:
+
+```sh
+python3 -m unittest discover -s ChatGPT/tests \
+  -p 'test_native_screencopy_popout.py' -q
+bash ChatGPT/experiments/native-popout/run_native_popout.sh \
+  --screencopy-host-check
+```
+
+This mode selects only
+`/tmp/dms-chatgpt-qs-v02-argc1/build-dms-screencopy-v01/src/quickshell`
+after checking all five Wayland/Screencopy CMake flags, ownership,
+execute permissions and linked libraries. It uses the already
+verified, actual `PluginPopout` DMS QML harness with offline
+`loadHtml`, a keyboard input, click-outside dismissal and Escape.
+No login is performed and no ChatGPT site is requested. The existing
+`--auth-chatgpt` and legacy modes keep the original test host and
+profile selection unchanged.
+
+The runner clears `DMS_SOCKET` and `NIRI_SOCKET`, uses separate
+XDG paths and a private D-Bus bus. Its only shared session endpoint
+is the Wayland compositor socket, so one temporary floating test
+window is visible. The 60-second timeout applies. The current user
+DMS service, system packages, existing ChatGPT plugin and saved
+authentication profile are not changed by the new mode.
+
+**Not yet tested on the user's host.** If this gate passes, it
+still does not substitute for a second, independently isolated
+full-DMS startup/readiness test. Old `SCREENCOPY=OFF` host
+activation remains permanently blocked.
