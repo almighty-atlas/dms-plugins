@@ -653,3 +653,26 @@ removes only the newly created override followed by a controlled
 restart. Changes require explicit user approval because restarting
 DMS can briefly remove desktop panels, launchers and polkit prompts.
 Keep the Zen v0.1 production widget until post-switch checks pass.
+
+
+## Verified live DMS systemd cgroup before service-scoped qs override (2026-11-10)
+
+Read-only user diagnostics confirm an active `dms.service`
+(`/usr/lib/systemd/user/dms.service`, no drop-in overrides), main
+DMS process PID 1254 (`/usr/bin/dms run --session`), and its
+supervised frontend `qs -p /run/user/1000/dms-shell/9483c24f0a364ed0`
+PID 1363 in the same service cgroup. Other child processes include
+the user's Bitwarden-vault helper, systemd-inhibit, gdbus and cava;
+a service restart may interrupt them.
+
+This confirms the service-scoped PATH-selection strategy can target
+the DMS frontend without altering the pacman-owned quickshell/qs
+binaries. No override has been applied. Remaining checks: backend's
+actual PATH, the isolated build's dynamic linkage / RPATH, QML
+module relocation and startup behavior, and a prepared rollback.
+A DMS restart is a significant external action and must be explicitly
+approved after the candidate is installed and verified.
+
+The already authenticated native experiment is **isolated**, not
+enabled as a normal DMS plugin. Never feed the production host a
+WebEngineView while stock quickshell still has argc=0.
