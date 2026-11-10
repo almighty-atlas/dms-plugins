@@ -59,7 +59,7 @@ class PreflightTests(unittest.TestCase):
         self.assertIn("Qt.application.arguments.length", source)
         self.assertIn("DMS_QS_ARGC_ZERO", source)
         self.assertIn("DMS_QS_ARGC_NONZERO", source)
-        self.assertIn("Qt.quit()", source)
+        self.assertNotIn("Qt.quit()", source)
         self.assertNotIn("import QtWebEngine", source)
         self.assertNotIn("WebEngineView", source)
         self.assertNotIn("console.log(Qt.application.arguments)", source)

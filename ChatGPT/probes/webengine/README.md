@@ -78,13 +78,18 @@ the running DMS instance. This QML starts as an independent Quickshell
 configuration/process:
 
 ```sh
-quickshell --path /tmp/dms-chatgpt-webview-probe/ChatGPT/probes/webengine/QuickshellArgsProbe.qml
+timeout --signal=TERM 5s quickshell --path \
+  /tmp/dms-chatgpt-webview-probe/ChatGPT/probes/webengine/QuickshellArgsProbe.qml
 ```
+
+`timeout` ordinarily exits with status **124** here because the test config
+has no window and deliberately stays running until the five-second timeout.
+It stops only the separately launched probe process, not your existing DMS.
+The two `DMS_QS_...` markers, not the timeout exit code, are the result.
 
 If your binary is named `qs` instead, replace `quickshell` with `qs`.
 The script emits only `DMS_QS_ARGUMENT_COUNT=<N>` and the fixed marker
-`DMS_QS_ARGC_ZERO` or `DMS_QS_ARGC_NONZERO`, then requests exit.
-It **never prints arguments**, imports WebEngine, loads a website, or
+`DMS_QS_ARGC_ZERO` or `DMS_QS_ARGC_NONZERO`, then remains idle until the wrapper timeout ends it. It **never prints arguments**, imports WebEngine, loads a website, or
 changes a configuration. A zero count supports the upstream diagnosis.
 A nonzero count means the specific binary differs from the reported
 build; further investigation would be needed before attempting embedding.

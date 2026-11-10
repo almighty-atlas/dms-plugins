@@ -8,6 +8,7 @@ ShellRoot {
         const argc = Qt.application.arguments.length
         console.log("DMS_QS_ARGUMENT_COUNT=" + argc)
         console.log(argc === 0 ? "DMS_QS_ARGC_ZERO" : "DMS_QS_ARGC_NONZERO")
-        Qt.quit()
+        // Do not call Qt.quit(): Quickshell does not connect this signal.
+        // The invoking test command terminates this separate process by timeout.
     }
 }

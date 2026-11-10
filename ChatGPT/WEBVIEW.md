@@ -179,3 +179,28 @@ Keep the production v0.1 Zen launcher unchanged. Even if the argument
 issue is resolved upstream, verify the Qt WebEngineQuick initialization,
 popup focus, authentication, file uploads and persistent profile before
 shipping embedded functionality.
+
+## CachyOS Quickshell argv probe: confirmed blocker
+
+On 2026-11-10 the user ran the separate `QuickshellArgsProbe.qml` on
+Quickshell 0.3.2 (CachyOS). The eight Python tests passed and console showed:
+
+```text
+DMS_QS_ARGUMENT_COUNT=0
+DMS_QS_ARGC_ZERO
+```
+
+This confirms the actual installed Quickshell has the argument-list behavior
+reported upstream in issues #1393 and #1412. The observed
+`QQmlEngine::quit() emitted, but no receivers connected` warning was caused
+by the *diagnostic* configuration's attempt to call `Qt.quit()`, not a
+WebEngine crash. The diagnostic no longer calls it; the process is bounded
+by `timeout` instead.
+
+**Decision:** do not instantiate `QtWebEngine` inside the production DMS
+process. Pursue a reviewed upstream Quickshell fix that provides at least
+`argv[0]` to Qt, then validate on a separate Quickshell instance before
+ever testing the actual DMS config. Issue #1393 includes experimental
+evidence that `argc=1` alone may be sufficient for its tested Qt build;
+the earlier initialization concerns are version-dependent and must
+be verified rather than assumed to require an additional patch.
