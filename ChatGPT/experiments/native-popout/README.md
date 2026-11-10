@@ -620,3 +620,50 @@ intentionally **not** updated to the new executable yet: the new
 build's checksum and its behavior must be validated first, before
 considering a *new* versioned stage and a separate live deployment
 plan. Do not run any existing `--activate`.
+
+## Full DMS ShellCore QML type-tree check, without spawning a second desktop
+
+The user confirmed the separate `build-dms-screencopy-v01` host compiled,
+and `verify_quickshell_screencopy.sh --offline-probe` emitted
+`DMS_SCREENCOPY_QML_READY: YES`. `vulkan-headers` was already installed
+in pacman at version `1:1.4.363.0-1`; no package upgrade was required.
+
+The next prerequisite is loading the **actual DMS QML dependency chain**
+which previously failed at `Modals/DLauncherV2/TileItem.qml`.
+A new test is provided, against the pinned DMS checkout and its DCommon
+git submodule:
+
+```sh
+python3 -m unittest discover -s ChatGPT/tests \
+  -p 'test_native_dms_shellcore_type_tree.py' -q
+bash ChatGPT/experiments/native-popout/verify_dms_shellcore_type_tree.sh --offline-probe
+```
+
+The runner copies its disposable QML fixture into the private DMS
+checkout (same QML import root as production), runs the new
+Screencopy-enabled Quickshell with an independent private XDG home,
+runtime directory and D-Bus bus, and clears `DMS_SOCKET`/
+`NIRI_SOCKET`. The probe calls `Qt.createComponent` for
+`ShellCore.qml` and requires the resulting component to have
+`Component.Ready`. It **never calls createObject on ShellCore**:
+no DMS panel, startup backend, plugin UI or screen capture is started.
+The temporary fixture and XDG data are removed on exit.
+
+Expected markers:
+```text
+DMS_SHELLCORE_QML_TYPE_TREE_READY: YES
+DMS_SHELLCORE_ONLY_COMPILED_NOT_INSTANTIATED
+DMS_SHELLCORE_NO_LIVE_DMS_CHANGES
+```
+
+If the type chain cannot compile, the runner displays bounded
+error lines to identify the next missing QML type/module; inspect
+any output before sharing to avoid sensitive paths or tokens.
+
+Passing this check is **still not proof** that the entire DMS shell can
+start or report readiness with the new host; it intentionally skips
+instantiation, DMS IPC, Niri plugin state and live services. A full
+readiness gate, separate safe test of WebEngine on the new host, and
+new versioned staging remain prerequisites. The old
+`manage_dms_override.sh --activate` remains disabled, as does all
+production native ChatGPT activation.
