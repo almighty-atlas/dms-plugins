@@ -883,3 +883,26 @@ handshake, actual Wayland window behavior, production plugin
 compatibility or browser stability. A nested/compositor-isolated full
 launch, if feasible, must be designed separately before we attempt
 a new live DMS host upgrade. The previous host remains blocked.
+
+## Complete DMS shell.qml type tree passed; corrected host WebEngine smoke next
+
+The user ran the new `--entry-probe` after syncing the feature
+branch. All **9** relevant static/syntax tests passed and the
+runtime marker `DMS_SHELL_ENTRY_QML_TYPE_TREE_READY: YES` was
+printed. This resolves all QML types of the pinned full `shell.qml`
+entrypoint in an isolated process, but does not instantiate it or
+prove the actual DMS backend readiness handshake.
+
+New explicit `run_native_popout.sh --screencopy-host-check` runs
+the **real DMS PluginPopout** with the newer,
+Screencopy-enabled argc=1 Quickshell build and offline local HTML.
+It verifies the separate build and CMake flags, preserves the
+previous original-host/login modes, and uses the isolated XDG/DBus
+environment and 60-second timeout. The intent is to confirm that
+the corrected host still works with Qt WebEngine and the DMS native
+popout before beginning a full, compositor-isolated startup test.
+
+The new 5-source/syntax-test suite is
+`test_native_screencopy_popout.py`. The test has not been run on
+the user desktop yet. No systemd or service switch is made; do not
+re-enable the retired candidate in `manage_dms_override.sh`.
