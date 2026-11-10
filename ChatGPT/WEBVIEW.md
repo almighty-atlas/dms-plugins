@@ -702,3 +702,32 @@ artifacts. Only runtime validation can establish whether this
 specific host can be relocated in its present environment.
 A persistent, versioned private installation and user-systemd
 drop-in plus rollback remain separate, later approval gates.
+
+## Versioned user-owned QS host staged only after user confirmation
+
+The user confirmed the complete relocated-copy offline DMS popup test
+was successful. The feature branch now has
+`stage_private_host.sh --stage`, which accepts **only** the exact
+previously tested patched build SHA256 and pinned commit, requires
+`patchelf`, creates a private versioned host under
+`~/.local/share/dms-chatgpt-native-host/9b0f339-argc1-v01/`,
+and **removes the unsafe empty-directory ELF RUNPATH from a copy**.
+It checks linked-library resolution after patching and fails closed
+on divergent existing versioned files. It never changes /usr/bin,
+pacman, DMS systemd unit, Niri config, or the logged-in WebEngine
+test profile.
+
+The same isolated `run_native_popout.sh` supports the new exact
+offline-only flag `--staged-host-check`, which invokes the staged
+`bin/qs` shim, retains the old DMS harness and local HTML fixture,
+and does **not** connect to the user's running DMS. Static source and
+`bash -n` tests are in `test_native_stage_host.py`.
+**Not yet runtime-tested** on the user's CachyOS host: successful
+staging, the cleaned-RUNPATH binary boot, and the full DMS popup
+through the versioned private shim.
+
+A future **separate** approved change can add a DMS-service-specific
+PATH drop-in and a full native/Zen-safe plugin mode once the staged
+host is validated. Do not replace the Pacman-owned `qs` symlink or
+`quickshell`, and preserve a rollback that requires no interactive
+launcher/polkit UI.
