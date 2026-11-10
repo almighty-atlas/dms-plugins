@@ -230,3 +230,29 @@ The runner remains bounded to 60 seconds and isolated from the live
 DMS backend; it is not a kernel sandbox. The Qt WebEngine
 Chromium sandbox remains enabled. Experimental production activation
 is still blocked.
+
+## Native public-site consent persistence gate (not yet tested)
+
+A 2026-11-10 screenshot confirms the signed-out ChatGPT page renders
+in the genuine DMS PluginPopout, including its cookie modal. Before
+authentication, test whether a non-sensitive consent choice survives
+a process restart with an **explicitly named, disk-backed profile**:
+
+```sh
+bash ChatGPT/experiments/native-popout/run_native_popout.sh --persistent-chatgpt
+```
+
+This new third profile, `dms-chatgpt-consent-probe-v01`, uses
+`AllowPersistentCookies` and is separate from both the offline profile
+and the public off-the-record `--public-chatgpt` profile. Qt's profile
+data is written only beneath the isolated runner's private XDG data and
+cache paths in `/tmp/dms-chatgpt-native-v02`. The files may remain on
+the test machine after the process exits and are not automatically
+deleted. The directory is **temporary**, not a production login path.
+
+In this opt-in mode, select **Reject non-essential** on the public site,
+let the test end, then launch **the same mode again** and check whether
+the dialog remains dismissed. This is a consent persistence probe, not
+proof of session authentication: some sites can store consent with
+different mechanisms. **Do not sign in, send prompts, upload files or
+grant permissions.** Run only one instance at a time.

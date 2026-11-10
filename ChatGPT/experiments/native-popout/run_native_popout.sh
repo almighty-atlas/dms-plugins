@@ -5,12 +5,16 @@ set -euo pipefail
 umask 077
 
 online=0
+persistent=0
 if [[ "$#" == 0 ]]; then
     : # default: local HTML only
 elif [[ "$#" == 1 && "$1" == "--public-chatgpt" ]]; then
     online=1
+elif [[ "$#" == 1 && "$1" == "--persistent-chatgpt" ]]; then
+    online=1
+    persistent=1
 else
-    echo "Usage: run_native_popout.sh [--public-chatgpt]" >&2
+    echo "Usage: run_native_popout.sh [--public-chatgpt|--persistent-chatgpt]" >&2
     exit 2
 fi
 
@@ -89,7 +93,11 @@ for dir in home config data cache state runtime; do
     chmod 700 "$root/$dir"
 done
 
-if [[ "$online" == 1 ]]; then
+if [[ "$persistent" == 1 ]]; then
+    echo "DMS_NATIVE_PERSISTENCE_TEST: https://chatgpt.com/; DO NOT SIGN IN"
+    echo "DMS_NATIVE_PERSISTENCE_TEST: disk profile in private XDG directories"
+    echo "DMS_NATIVE_PERSISTENCE_TEST: reject nonessential cookies, restart to check consent"
+elif [[ "$online" == 1 ]]; then
     echo "DMS_NATIVE_PUBLIC_TEST: opening https://chatgpt.com/; DO NOT SIGN IN"
     echo "DMS_NATIVE_PUBLIC_TEST: off-the-record WebEngine profile"
 else
@@ -116,6 +124,7 @@ exec /usr/bin/env -i \
     QT_QPA_PLATFORM="wayland" \
     GSETTINGS_BACKEND="memory" \
     DMS_NATIVE_ONLINE_PROBE="$online" \
+    DMS_NATIVE_PERSISTENCE_PROBE="$persistent" \
     DMS_SOCKET="" \
     NIRI_SOCKET="" \
     dbus-run-session -- \

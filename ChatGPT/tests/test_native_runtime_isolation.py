@@ -54,6 +54,7 @@ class NativeRuntimeIsolationTests(unittest.TestCase):
         self.assertIn('if [[ "$#" == 0 ]]', SCRIPT)
         self.assertIn('"--public-chatgpt"', SCRIPT)
         self.assertIn('DMS_NATIVE_ONLINE_PROBE="$online"', SCRIPT)
+        self.assertIn('DMS_NATIVE_PERSISTENCE_PROBE="$persistent"', SCRIPT)
         self.assertIn('DO NOT SIGN IN', SCRIPT)
         self.assertIn('dbus-run-session --', SCRIPT)
         self.assertIn('DMS_SOCKET=""', SCRIPT)

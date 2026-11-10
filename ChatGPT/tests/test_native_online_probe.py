@@ -25,6 +25,17 @@ class PublicChatGptProbeTests(unittest.TestCase):
         self.assertNotIn("runJavaScript(", WIDGET)
         self.assertNotIn("WebChannel", WIDGET)
 
+    def test_named_consent_profile_is_separate(self):
+        self.assertIn('persistenceProbe: Quickshell.env("DMS_NATIVE_PERSISTENCE_PROBE") === "1"', WIDGET)
+        self.assertIn('id: consentProfileFactory', WIDGET)
+        self.assertIn('storageName: "dms-chatgpt-consent-probe-v01"', WIDGET)
+        self.assertIn('persistentCookiesPolicy: WebEngineProfile.AllowPersistentCookies', WIDGET)
+        self.assertIn('consentProfileFactory.instance()', WIDGET)
+        self.assertIn('DMS_NATIVE_PROFILE_CONFIG_INVALID', WIDGET)
+        self.assertIn('elif [[ "$#" == 1 && "$1" == "--persistent-chatgpt" ]]', RUNNER)
+        self.assertIn('DMS_NATIVE_PERSISTENCE_PROBE="$persistent"', RUNNER)
+        self.assertIn('DO NOT SIGN IN', RUNNER)
+
     def test_runner_requires_explicit_opt_in(self):
         self.assertIn('if [[ "$#" == 0 ]]', RUNNER)
         self.assertIn('elif [[ "$#" == 1 && "$1" == "--public-chatgpt" ]]', RUNNER)

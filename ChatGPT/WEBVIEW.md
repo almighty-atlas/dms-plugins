@@ -419,3 +419,20 @@ direct navigation target is `https://chatgpt.com/`. No login, account
 data, production DMS settings or installation are involved. Online
 DMS popup runtime has **not** yet been performed. User must refrain
 from signing in until cookie/session behavior is separately reviewed.
+
+## Public-site native popout confirmed; persistent consent-only gate
+
+The user's screenshot confirms responsive signed-out
+`https://chatgpt.com/` within a genuine patched DMS PluginPopout,
+including the cookie dialog. That is a rendering success, not an
+authenticated session test.
+
+Qt 6.11 documents that a named `WebEngineProfilePrototype` creates
+separate disk-backed profile storage, and
+`WebEngineProfile.AllowPersistentCookies` saves persistent cookies.
+An opt-in `--persistent-chatgpt` runner mode now uses a **third** named
+profile, `dms-chatgpt-consent-probe-v01`, underneath isolated `/tmp`
+XDG paths. The test is intended only to check non-sensitive cookie
+consent after a complete process restart; no login, profile import
+from Zen, filesystem installation or production DMS activation.
+Its runtime result is **pending**.
