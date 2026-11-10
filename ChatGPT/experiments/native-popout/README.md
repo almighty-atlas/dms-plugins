@@ -759,3 +759,60 @@ authentication profile are not changed by the new mode.
 still does not substitute for a second, independently isolated
 full-DMS startup/readiness test. Old `SCREENCOPY=OFF` host
 activation remains permanently blocked.
+
+## Full DMS frontend runtime trial in a separate headless Niri (next)
+
+The user confirmed the *new* `SCREENCOPY=ON` Quickshell passed the
+actual native `PluginPopout` + offline QtWebEngine test
+(`run_native_popout.sh --screencopy-host-check`). The source-level
+entrypoint, ShellCore and Screencopy gates were already passed.
+
+A new bounded **full DMS frontend initialization probe** is available:
+
+```sh
+python3 -m unittest discover -s ChatGPT/tests \
+  -p 'test_native_headless_niri_full_ui.py' -q
+bash ChatGPT/experiments/native-popout/run_dms_headless_niri.sh --headless-probe
+```
+
+Unlike prior compile-only probes, this launches a **separate Niri
+headless compositor** and instantiates a temporary instrumented copy
+of the real pinned `shell.qml` in the corrected argc=1 Quickshell
+host. Instrumentation only adds log markers at entry creation and
+`dmsShellLoader.onLoaded`. It changes no tracked DMS QML sources.
+
+Niri runs with `NIRI_BACKEND=headless`, a minimal private
+`--config` path and **without `--session`**, which would otherwise
+import environment state into the real user systemd/DBus session.
+The test subprocesses have a different `XDG_RUNTIME_DIR`, their
+own Wayland and Niri IPC sockets, separate XDG config/data/cache,
+private session D-Bus and a deliberately unavailable system D-Bus
+address. The actual Niri `WAYLAND_DISPLAY` and `NIRI_SOCKET` are
+**not forwarded**. No connected DMS backend, real plugin state,
+session auth profile, `systemctl` restart or installed package is
+used. This is process/environment isolation, **not** a kernel-level
+security sandbox.
+
+The test waits for two markers:
+- `DMS_HEADLESS_ENTRY_INSTANTIATED: YES` (instrumented `shell.qml`)
+- `DMS_HEADLESS_DMSSHELL_LOADED: YES` (async `DMSShell.qml` loader)
+
+and rejects the original `ScreencopyView is not a type` /
+`Type ... unavailable` failure chain. The Quickshell process is
+bounded to 16 seconds with a 38-second outer watchdog; a trap
+stops the test Niri and deletes the temporary files.
+
+**Limitations:** DMS_SOCKET and NOTIFY_SOCKET are intentionally
+blank. `shell.ready` therefore cannot occur, so this checks actual
+frontend initialization *without* the DMS readiness handshake. No
+backend services/plugins or monitor restoration are verified.
+A successful headless test is not sufficient for a live service
+switch; new host staging and additional readiness testing remain.
+This test has not yet run on the user's CachyOS machine.
+
+On failure, the script prints selected log lines. It can fail due to
+headless Niri startup, GL/Wayland resource limits, or QML runtime
+behavior rather than the corrected Quickshell itself. Diagnose the
+reported failure before changing any live service. **Do not run
+the old `manage_dms_override.sh --activate`**, which remains
+blocked for the known broken host.
