@@ -30,6 +30,18 @@ if [[ -n "$untracked" ]]; then
     exit 1
 fi
 
+common_dir="$root/dux-shell/dux-qml-common"
+if [[ ! -d "$common_dir/.git" && ! -f "$common_dir/.git" ]] ||
+   [[ ! -d "$qml_root/DCommon/Widgets" ]] ||
+   [[ "$(readlink "$qml_root/DCommon" 2>/dev/null)" != "../dux-qml-common/DCommon" ]]; then
+    echo "DMS_NATIVE_RUN_BLOCKED: DCommon submodule missing; rerun prepare_sandbox.sh" >&2
+    exit 1
+fi
+if [[ "$(git -C "$common_dir" rev-parse HEAD)" != "0877466a25b8e191a865bf75d0e500de6351ae04" ]]; then
+    echo "DMS_NATIVE_RUN_BLOCKED: unreviewed DCommon submodule revision" >&2
+    exit 1
+fi
+
 original_runtime="$XDG_RUNTIME_DIR"
 wayland_name="$WAYLAND_DISPLAY"
 [[ "$original_runtime" == /* && -d "$original_runtime" ]] || {

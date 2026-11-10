@@ -147,3 +147,29 @@ expected for an otherwise successful run.
 No website requests, ChatGPT login, credentials, production plugin edits
 or full DMS daemon/session launch. The experiment is unverified until
 the user's CachyOS runtime test.
+
+## First runtime failure: missing DCommon submodule (verified 2026-11-10)
+
+The first isolated Quickshell host launched and passed 4/4 static safety
+tests, but **QML configuration load failed before the popout could open**:
+`PluginComponent` -> `BasePill` -> `BarPill` ->
+`module "qs.DCommon.Widgets" is not installed`.
+Numerous Quickshell QML scanner warnings about missing `DCommon`
+imports were associated with the same missing submodule. Portal/DBus
+diagnostics are not the blocking error.
+
+Upstream pinned DMS superproject commit
+`e46ccbc1d58930d6a189cd1c90b276db2d64bf42`
+stores `quickshell/DCommon` as the symlink
+`../dux-qml-common/DCommon` and references `dux-qml-common`
+as a git submodule at the **pinned gitlink commit**
+`0877466a25b8e191a865bf75d0e500de6351ae04`.
+Our original shallow superproject clone had omitted this submodule.
+
+`prepare_sandbox.sh` now initializes that submodule **in the private
+checkout only**, verifies the gitlink revision and symlink resolution,
+and prints `DMS_COMMON_SHA`. The runtime runner fails immediately if
+the required submodule is missing or at an unexpected revision.
+No need to rebuild Quickshell: the failure is in copied QML content.
+After running the updated tests and preparer, rerun the same
+`run_native_popout.sh` trial. The result is not yet verified.

@@ -39,6 +39,14 @@ class NativeCandidateContracts(unittest.TestCase):
         self.assertNotIn("SystemTray", shell)
         self.assertNotIn("Exec", shell)
 
+    def test_preparation_initializes_exact_dms_common_submodule(self):
+        sh = (ROOT / "prepare_sandbox.sh").read_text()
+        self.assertIn("submodule update --init --depth 1 dux-qml-common", sh)
+        self.assertIn("0877466a25b8e191a865bf75d0e500de6351ae04", sh)
+        self.assertIn('readlink "$qml_root/DCommon"', sh)
+        self.assertIn('"-../dux-qml-common/DCommon"'.replace('"-', '"'), sh)
+        self.assertIn('DMS_COMMON_SHA: $common_pin', sh)
+
     def test_prep_doesnt_install_or_start(self):
         sh = (ROOT / "prepare_sandbox.sh").read_text()
         self.assertIn("set -euo pipefail", sh)

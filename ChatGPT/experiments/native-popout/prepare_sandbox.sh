@@ -35,11 +35,29 @@ if [[ -n "$(git -C "$source_dir" diff --name-only)" ]]; then
   echo "Tracked DMS source changes detected; refusing overwrite" >&2
   exit 1
 fi
+# The DMS repository stores quickshell/DCommon as a symlink to the
+# version-pinned dux-qml-common git submodule. A shallow superproject
+# checkout does NOT populate submodules; missing it breaks BasePill.
+common_pin=0877466a25b8e191a865bf75d0e500de6351ae04
+expected_link="../dux-qml-common/DCommon"
+if [[ ! -L "$qml_root/DCommon" ]] ||
+   [[ "$(readlink "$qml_root/DCommon")" != "$expected_link" ]]; then
+  echo "DMS_NATIVE_SUBMODULE_BLOCKED: unexpected DCommon symlink" >&2
+  exit 1
+fi
+git -C "$source_dir" submodule update --init --depth 1 dux-qml-common
+if [[ "$(git -C "$source_dir/dux-qml-common" rev-parse HEAD)" != "$common_pin" ]] ||
+   [[ ! -d "$qml_root/DCommon/Widgets" ]] ||
+   [[ ! -f "$qml_root/DCommon/Common/Proc.qml" ]]; then
+  echo "DMS_NATIVE_SUBMODULE_BLOCKED: pinned DCommon content unavailable" >&2
+  exit 1
+fi
 mkdir -p "$qml_root/ChatGPTNativeProbe" "$root/config" "$root/data" "$root/cache" "$root/state" "$root/home"
 chmod 700 "$root/config" "$root/data" "$root/cache" "$root/state" "$root/home"
 cp -- "$script_dir/Widget.qml" "$qml_root/ChatGPTNativeProbe/Widget.qml"
 cp -- "$script_dir/ChatGPTNativeHarness.qml" "$qml_root/ChatGPTNativeHarness.qml"
 printf '%s\n' "DMS_NATIVE_SANDBOX_PREPARED: $root" \
   "DMS_SOURCE_SHA: $actual" \
+  "DMS_COMMON_SHA: $common_pin" \
   "NO_SHELL_OR_BROWSER_STARTED" \
   "NO_SYSTEM_OR_USER_DMS_CONFIG_CHANGED"

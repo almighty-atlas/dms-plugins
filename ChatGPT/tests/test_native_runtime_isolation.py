@@ -37,6 +37,12 @@ class NativeRuntimeIsolationTests(unittest.TestCase):
                           "dms restart", "dms plugins install", "systemctl ", "--no-sandbox"):
             self.assertNotIn(forbidden, SCRIPT)
 
+    def test_fails_closed_without_pinned_dcommon_submodule(self):
+        self.assertIn("DMS_NATIVE_RUN_BLOCKED: DCommon submodule missing", SCRIPT)
+        self.assertIn("0877466a25b8e191a865bf75d0e500de6351ae04", SCRIPT)
+        self.assertIn('readlink "$qml_root/DCommon"', SCRIPT)
+        self.assertIn('"$qml_root/DCommon/Widgets"', SCRIPT)
+
     def test_explicit_offline_only(self):
         widget = (ROOT / "Widget.qml").read_text()
         self.assertIn("loadHtml(", widget)

@@ -372,3 +372,16 @@ intentional host connection. It does not start the full DMS shell or
 touch the installed plugin. This reduces accidental backend interactions,
 but is not a kernel-level sandbox. Actual native popout runtime is
 still awaiting user verification.
+
+## DCommon symlink/submodule prerequisite identified (2026-11-10)
+
+The first bounded offline native DMS popup runtime **did not reach
+the visual popup**. Quickshell failed to load `PluginComponent` because
+`qs.DCommon.Widgets` was unavailable. The pinned upstream DMS checkout
+has `quickshell/DCommon -> ../dux-qml-common/DCommon` and a
+`dux-qml-common` gitlink pinned to
+`0877466a25b8e191a865bf75d0e500de6351ae04`.
+The source preparation cloned the superproject without initializing
+its submodule; the missing QML imports are consistent with that.
+Preparation now initializes/verifies the **private** submodule and
+runtime preflights its presence. No production changes; retest pending.
