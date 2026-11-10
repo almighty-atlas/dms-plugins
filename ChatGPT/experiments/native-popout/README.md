@@ -428,3 +428,57 @@ Qt version maintenance need separate review. Rollback for this
 staging-only step is simply not to enable the service override;
 do not delete or edit any live DMS or Zen profile. Do not stage
 a production override until explicit approval.
+
+## Service-scoped private host override preview, intentionally read-only
+
+On 2026-11-10 the user confirmed that the versioned, private
+`stage_private_host.sh --stage` host also works through
+`run_native_popout.sh --staged-host-check`: the true offline DMS
+PluginPopout opens and the input is usable. This is a user-reported
+runtime success, **not** a full production DMS host migration.
+
+A strictly **read-only** systemd preview script is now available:
+
+```sh
+bash ChatGPT/experiments/native-popout/preview_dms_override.sh --preview
+```
+
+It verifies the private binary and exact launcher, confirms the
+RPATH/RUNPATH was removed and linked libraries resolve, reads the
+actual active `dms.service` MainPID and PATH from `/proc`, and
+requires the previously observed system service path and *no*
+existing overrides. It prints a proposed one-file drop-in:
+
+```ini
+# Proposed only, do NOT apply directly:
+[Service]
+Environment="PATH=<private bin/qs dir>:<existing DMS PATH>"
+```
+
+The concrete absolute paths come from the user's own runtime,
+not an inferred systemd setting. `Environment=` does not expand
+`$PATH`; systemd will use the full explicit string. See
+systemd.exec(5) for the environment-setting semantics.
+
+**The preview writes nothing and does not call systemctl reload,
+restart, stop, kill, enable, or disable.** It also does not alter
+the ChatGPT WebEngine auth profile, the installed plugin or the
+stock Pacman files. The service-scoped PATH change, if separately
+approved later, will affect DMS and its child processes, not
+only Quickshell. A DMS restart can briefly interrupt the panel,
+the Bitwarden helper and other child processes.
+
+**Planned rollback (not executed or installed yet):** delete only
+the exact managed `50-chatgpt-private-qs.conf` drop-in created
+during the separately approved activation, run
+`systemctl --user daemon-reload`, restart `dms.service`,
+then verify `/proc/<new qs pid>/exe` resolves back to
+`/usr/bin/quickshell`. This must be possible from a TTY even
+if the graphical panel fails. Never delete third-party
+overrides, the Pacman package, or the saved auth profile.
+Before actual activation, explicit permission must be obtained.
+
+Even after a service host switch, **native ChatGPT is not
+automatically installed as a production plugin**: the released
+`ChatGPT/Widget.qml` is still Zen-based. A separate, gated
+native widget with safe Zen fallback will be needed.
