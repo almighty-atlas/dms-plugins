@@ -102,6 +102,13 @@ def render_css(palette, mode="dark"):
     --interactive-label-accent-default: var(--dms-onPrimary) !important;
   }}
   body {{ background-color: var(--dms-background) !important; color: var(--dms-onSurface) !important; }}
+  /* Authenticated ChatGPT DOM, 2026-11-10: <main> sets an explicit black
+     background while body already uses the intended DMS color. The html root
+     is also black. Override both without relying on generated class names. */
+  html.chatgpt-theme,
+  html.chatgpt-theme main {{
+    background-color: var(--dms-background) !important;
+  }}
   /* Public lightweight-web DOM inspected 2026-11-10. No generated class names. */
   #web-mobile-root [data-app-shell],
   #web-mobile-root main[data-slot="conversation"] {{

@@ -168,3 +168,17 @@ Keep it locally or share it without adding private browser/shell logs.
 
 No auto-close/kill, production-service restart, Niri edit, browser cookie access,
 API usage, paid service or automatic PR merge is part of these tests.
+
+## CachyOS desktop feedback – 2026-11-10 (manual, user-confirmed)
+
+- DMS widget click opens and subsequently focuses the same ChatGPT window.
+  Hover no longer triggers focus/launch oscillation.
+- Isolated Zen login and previous ChatGPT conversations are available.
+- Browser DevTools confirmed `--dms-background: #1e1e2e` is present, and
+  the computed BODY background is `rgb(30, 30, 46)`.
+- The actual authenticated page used `html.chatgpt-theme` with computed
+  black background and a generated-ID MAIN with `rgb(0, 0, 0)`.
+  No stable class was inferred from the generated class/ID.
+- The new CSS override explicitly colors `html.chatgpt-theme` and its MAIN
+  using the DMS background token, scoped to `https://chatgpt.com/`.
+  **Visual correctness after profile restart is still unverified.**

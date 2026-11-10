@@ -72,6 +72,16 @@ class ThemeTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             theme.render_css(dict(theme.DEFAULTS, primary="red; }"))
 
+    def test_authenticated_chatgpt_black_surface_override(self):
+        # Real desktop inspector: html.chatgpt-theme and its MAIN were black,
+        # even though BODY already had the correct DMS background.
+        for colors, mode in ((theme.DEFAULTS, "dark"), (theme.LIGHT, "light")):
+            css = theme.render_css(colors, mode)
+            self.assertIn("html.chatgpt-theme,\n  html.chatgpt-theme main {", css)
+            self.assertIn("background-color: var(--dms-background) !important;", css)
+            self.assertNotIn("MainContentSurface-EnuIYE", css)
+            self.assertNotIn("_R_ldj6nl9iqr7dcchej9arad5_", css)
+
     def test_idempotent_sync_and_reversible_settings(self):
         theme.sync()
         profile = theme.profile_path()
