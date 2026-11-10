@@ -477,3 +477,27 @@ remains outside the repo and must never be uploaded or logged.
 The stock Quickshell argc=0 host and production DMS plugin remain
 unchanged. The PR must remain draft until native integration and
 a supported patched-host deployment path are tested.
+
+## Authenticated ChatGPT session survives a full isolated Quickshell restart (2026-11-10)
+
+The user restarted `run_native_popout.sh --auth-chatgpt` after signing in
+during the first run, and explicitly confirmed that the same ChatGPT
+account was **still logged in without reauthentication**. Together with
+the user-provided screenshot of the signed-in UI, this verifies
+authenticated session persistence for the separate named WebEngine
+profile in the genuine DMS `PluginPopout` **under the patched, isolated
+Quickshell build**.
+
+This does not verify response streaming, conversation recovery after
+popup closure, authenticated file uploads, OAuth/new-window handling
+in other login flows, performance, DMS hot reload, multi-monitor
+anchoring or production host compatibility. The profile can contain
+live session tokens and must not be uploaded, printed or committed.
+The system-installed Quickshell remains unpatched (`argc=0` as
+previously tested), so a production DMS `WebEngineView` is **not
+safe to activate** at this stage. Retain the released v0.1 Zen
+fallback and keep this PR in Draft.
+
+Next candidate should remain isolated from the v0.1 manifest until
+an explicit preflight gate for the Quickshell host exists; native
+login data should not be copied into or read from the Zen profile.
