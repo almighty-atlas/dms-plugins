@@ -13,6 +13,6 @@ ShellRoot {
             console.error("DMS_SHELL_ENTRY_QML_TYPE_TREE_FAILED")
             console.error(component.errorString())
         }
-        // Deliberately DO NOT call component.createObject().
+        // Deliberately do not instantiate the compiled shell entrypoint.
     }
 }
