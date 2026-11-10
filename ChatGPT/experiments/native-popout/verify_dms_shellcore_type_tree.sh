@@ -5,10 +5,11 @@
 set -euo pipefail
 umask 077
 
-if [[ "$#" != 1 || "$1" != "--offline-probe" ]]; then
-    echo "Usage: bash verify_dms_shellcore_type_tree.sh --offline-probe" >&2
+if [[ "$#" != 1 || ( "$1" != "--offline-probe" && "$1" != "--entry-probe" ) ]]; then
+    echo "Usage: bash verify_dms_shellcore_type_tree.sh --offline-probe|--entry-probe" >&2
     exit 2
 fi
+mode="$1"
 
 root=/tmp/dms-chatgpt-native-v02
 dms_source="$root/dux-shell"
@@ -18,6 +19,13 @@ build_dir=/tmp/dms-chatgpt-qs-v02-argc1/build-dms-screencopy-v01
 binary="$build_dir/src/quickshell"
 script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
 source_fixture="$script_dir/DmsShellCoreLoadProbe.qml"
+expected_ready=DMS_SHELLCORE_QML_TYPE_TREE_READY
+expected_failure=DMS_SHELLCORE_QML_TYPE_TREE_FAILED
+if [[ "$mode" == "--entry-probe" ]]; then
+    source_fixture="$script_dir/DmsShellEntrypointLoadProbe.qml"
+    expected_ready=DMS_SHELL_ENTRY_QML_TYPE_TREE_READY
+    expected_failure=DMS_SHELL_ENTRY_QML_TYPE_TREE_FAILED
+fi
 dms_pin=e46ccbc1d58930d6a189cd1c90b276db2d64bf42
 common_pin=0877466a25b8e191a865bf75d0e500de6351ae04
 
@@ -32,6 +40,7 @@ if [[ -L "$root" || -L "$dms_source" || -L "$qml_root" ||
       ! -O "$root" || ! -O "$build_dir" ||
       ! -f "$binary" || ! -x "$binary" || ! -O "$binary" ||
       ! -f "$source_fixture" || ! -f "$qml_root/ShellCore.qml" ||
+      ! -f "$qml_root/shell.qml" ||
       "$(readlink "$qml_root/DCommon" 2>/dev/null)" != "../dux-qml-common/DCommon" ]]; then
     echo "DMS_SHELLCORE_PROBE_BLOCKED: unsafe/missing isolated host or DMS source" >&2
     exit 1
@@ -99,15 +108,20 @@ cd -- "$build_dir"
     "$binary" --path "$fixture" > "$private/output.log" 2>&1 || status=$?
 
 if [[ "$status" != 0 && "$status" != 124 ]] ||
-   ! grep -Fq "DMS_SHELLCORE_QML_TYPE_TREE_READY" "$private/output.log" ||
-   grep -Eq 'DMS_SHELLCORE_QML_TYPE_TREE_FAILED|ScreencopyView is not a type' "$private/output.log"; then
+   ! grep -Fq "$expected_ready" "$private/output.log" ||
+   grep -Fq "$expected_failure" "$private/output.log" ||
+   grep -Fq 'ScreencopyView is not a type' "$private/output.log"; then
     echo "DMS_SHELLCORE_TYPE_TREE_FAILED: component load incomplete (exit $status)"
     grep -E 'ERROR|WARN|Error|error|module|Type |type|DMS_SHELLCORE' \
         "$private/output.log" | tail -n 45 || true
     exit 1
 fi
 
-echo "DMS_SHELLCORE_QML_TYPE_TREE_READY: YES"
+if [[ "$mode" == "--entry-probe" ]]; then
+    echo "DMS_SHELL_ENTRY_QML_TYPE_TREE_READY: YES"
+else
+    echo "DMS_SHELLCORE_QML_TYPE_TREE_READY: YES"
+fi
 echo "DMS_SHELLCORE_SOURCE_PINNED: YES"
 echo "DMS_SHELLCORE_ONLY_COMPILED_NOT_INSTANTIATED"
 echo "DMS_SHELLCORE_ISOLATED_XDG_AND_DBUS"
