@@ -153,3 +153,29 @@ for further progress.
 
 Official versioned API:
 https://doc.qt.io/qt-6.11/qtwebenginequick.html
+
+## Quickshell 0.3.2 additional blocker (verified upstream, 2026-11-10)
+
+After the online no-login page-load probe correctly displayed the public
+ChatGPT landing page (user screenshot), upstream Quickshell source and issue
+reports revealed a more concrete integration blocker:
+
+- Quickshell constructs `QApplication` / `QGuiApplication` with
+  `auto qArgC = 0` in `src/launch/launch.cpp`.
+- GitHub issues [#1393](https://github.com/quickshell-mirror/quickshell/issues/1393)
+  and [#1412](https://github.com/quickshell-mirror/quickshell/issues/1412)
+  reproduce **fatal Qt WebEngine/Chromium startup** in Quickshell 0.3.2
+  because `QCoreApplication::arguments()` is empty.
+- A proposed one-line upstream fix changes `qArgC` to 1; this is an
+  external proposal, **not** an applied or verified fix for the user's
+  installed DMS/Quickshell.
+- The existing independent Qt executable passed because its
+  `QGuiApplication app(argc, argv)` receives the real program name.
+- A safe standalone `QuickshellArgsProbe.qml` now checks only the integer
+  Qt argument count in a **separate Quickshell instance**. It does not
+  import QtWebEngine, launch a browser or interact with DMS.
+
+Keep the production v0.1 Zen launcher unchanged. Even if the argument
+issue is resolved upstream, verify the Qt WebEngineQuick initialization,
+popup focus, authentication, file uploads and persistent profile before
+shipping embedded functionality.

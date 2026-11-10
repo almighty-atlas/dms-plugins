@@ -54,6 +54,17 @@ class PreflightTests(unittest.TestCase):
         self.assertNotIn("Zen", qml.split("import QtQuick")[1])
         self.assertIn("do not sign in", qml)
 
+    def test_separate_quickshell_args_probe_does_not_load_webengine(self):
+        source = PATH.with_name("QuickshellArgsProbe.qml").read_text()
+        self.assertIn("Qt.application.arguments.length", source)
+        self.assertIn("DMS_QS_ARGC_ZERO", source)
+        self.assertIn("DMS_QS_ARGC_NONZERO", source)
+        self.assertIn("Qt.quit()", source)
+        self.assertNotIn("import QtWebEngine", source)
+        self.assertNotIn("WebEngineView", source)
+        self.assertNotIn("console.log(Qt.application.arguments)", source)
+        self.assertNotIn("https://", source)
+
     def test_offline_qml_and_early_initialization(self):
         qml = PATH.with_name("Probe.qml").read_text()
         self.assertIn("loadHtml(", qml)

@@ -63,3 +63,33 @@ inspection.
 
 Neither this nor the successful offline test proves that a WebEngineView
 can be embedded inside the already-running Quickshell process.
+
+## 4. Separate Quickshell argv preflight (safe, no WebEngine)
+
+Quickshell upstream issues [#1393](https://github.com/quickshell-mirror/quickshell/issues/1393)
+and [#1412](https://github.com/quickshell-mirror/quickshell/issues/1412)
+report that **Quickshell 0.3.2** constructs `QGuiApplication` with
+`argc = 0`. Qt WebEngine's Chromium implementation may then abort
+on missing program name. The proposed upstream fix passes `argc = 1`
+instead, without forwarding all Quickshell CLI options to Qt.
+
+We can measure this **without creating any WebEngineView** or touching
+the running DMS instance. This QML starts as an independent Quickshell
+configuration/process:
+
+```sh
+quickshell --path /tmp/dms-chatgpt-webview-probe/ChatGPT/probes/webengine/QuickshellArgsProbe.qml
+```
+
+If your binary is named `qs` instead, replace `quickshell` with `qs`.
+The script emits only `DMS_QS_ARGUMENT_COUNT=<N>` and the fixed marker
+`DMS_QS_ARGC_ZERO` or `DMS_QS_ARGC_NONZERO`, then requests exit.
+It **never prints arguments**, imports WebEngine, loads a website, or
+changes a configuration. A zero count supports the upstream diagnosis.
+A nonzero count means the specific binary differs from the reported
+build; further investigation would be needed before attempting embedding.
+
+Even with a nonzero count, early WebEngine/graphics initialization and
+all login/profile/permission gates remain unverified. Do not load the
+WebEngineView into the live DMS shell or modify installed Quickshell
+without a separately reviewed, supported fix.
