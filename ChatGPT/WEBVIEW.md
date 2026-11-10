@@ -906,3 +906,31 @@ The new 5-source/syntax-test suite is
 `test_native_screencopy_popout.py`. The test has not been run on
 the user desktop yet. No systemd or service switch is made; do not
 re-enable the retired candidate in `manage_dms_override.sh`.
+
+## Corrected host native popout passed; isolated full DMS frontend next
+
+The user confirmed `run_native_popout.sh --screencopy-host-check`
+successfully opened and operated the real DMS `PluginPopout`
+with Qt WebEngine using the corrected Screencopy-capable private
+Quickshell host. The preview and staging of the original broken
+host remain inactive. Full DMS readiness remains untested.
+
+New `run_dms_headless_niri.sh --headless-probe` and separate
+`run_dms_headless_niri_inner.sh` instantiate the pinned
+`shell.qml` source in a **second, headless Niri**, not in the
+current Niri Wayland socket. The only change to a disposable
+`shell.qml` copy is adding two log markers for the root and
+async DMSShell loader. Environment is sanitized via `env -i`;
+Niri has a private config and `NIRI_BACKEND=headless`,
+never `--session`. DBus/XDG/Wayland/IPC sockets are private,
+and no real DMS backend or auth profile is used. The
+processes terminate automatically and their temp files are removed.
+
+Six static/shell-syntax tests in
+`test_native_headless_niri_full_ui.py` are prepared.
+**Not yet executed** by the user. Expected runtime markers:
+`DMS_HEADLESS_ENTRY_INSTANTIATED: YES` and
+`DMS_HEADLESS_DMSSHELL_LOADED: YES`.
+These markers do not imply `shell.ready` or production
+feature/plugin compatibility because DMS_SOCKET is deliberately
+empty. Never reactivate the retired SCREENCOPY=OFF candidate.
