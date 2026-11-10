@@ -256,3 +256,48 @@ the dialog remains dismissed. This is a consent persistence probe, not
 proof of session authentication: some sites can store consent with
 different mechanisms. **Do not sign in, send prompts, upload files or
 grant permissions.** Run only one instance at a time.
+
+## Consent persistence confirmed; separate opt-in authentication test (2026-11-10)
+
+The user confirmed that the cookie dialog remained dismissed after the
+second launch of `--persistent-chatgpt`. This shows that the tested
+preference persisted across a **full Quickshell process restart**.
+It does **not** demonstrate authenticated-session persistence.
+
+A separate *fourth* named profile, `dms-chatgpt-auth-probe-v01`,
+can now be selected by the **explicit** `--auth-chatgpt` argument.
+It is distinct from all prior offline, anonymous public and cookie
+consent profiles. To avoid losing login sessions after `/tmp`
+cleanup, the runner stores this specific profile's private HOME/XDG
+data in the user-owned, mode-0700 directory
+`~/.local/share/dms-chatgpt-native-auth-probe/`. The runtime
+session still uses the isolated socket path, private session D-Bus,
+unset DMS/Niri backends and the reviewed patched Quickshell binary.
+
+**Important:** This private directory can contain valid authentication
+tokens, cookies and other sensitive account data. Do not upload or share
+its contents, screenshots showing login details, OAuth callback URLs,
+or unredacted authentication logs. The assistant never needs credentials.
+
+Opt-in command, **only when you are ready to authenticate yourself**:
+
+```sh
+bash ChatGPT/experiments/native-popout/run_native_popout.sh --auth-chatgpt
+```
+
+The login mode lasts at most **300 seconds** per run, giving time for
+interactive authentication. The login provider may reject Qt WebEngine,
+open a new window that is not handled by this prototype or require a
+passkey mechanism not available in the isolated D-Bus environment.
+Do not weaken browser sandbox flags to work around such failures.
+
+If sign-in works, close the run and launch the *same* opt-in mode
+again. Verify whether the account remains signed in. This test is
+limited to the local prototype; it is neither a release endorsement
+nor evidence that an installed DMS plugin can run WebEngine using
+the system's still-unpatched argc=0 Quickshell.
+
+To end the experiment after testing, first close all test windows,
+then remove the dedicated auth-test directory **only if you no longer
+need its saved session**. Never delete the production DMS or Zen data
+as part of this cleanup.
