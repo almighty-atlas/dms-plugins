@@ -667,3 +667,43 @@ readiness gate, separate safe test of WebEngine on the new host, and
 new versioned staging remain prerequisites. The old
 `manage_dms_override.sh --activate` remains disabled, as does all
 production native ChatGPT activation.
+
+## Full DMS shell.qml entrypoint QML type tree gate (read-only isolated, next)
+
+The user completed the real `ShellCore.qml` source-type gate using the
+new `build-dms-screencopy-v01` binary:
+
+```text
+Ran 5 tests ... OK
+DMS_SHELLCORE_QML_TYPE_TREE_READY: YES
+DMS_SHELLCORE_SOURCE_PINNED: YES
+DMS_SHELLCORE_ONLY_COMPILED_NOT_INSTANTIATED
+DMS_SHELLCORE_ISOLATED_XDG_AND_DBUS
+DMS_SHELLCORE_NO_LIVE_DMS_CHANGES
+```
+
+The existing `verify_dms_shellcore_type_tree.sh` now accepts a
+second, explicit, isolated `--entry-probe` mode. It checks **the real
+top-level `shell.qml` QML type tree** by resolving that component with
+`Qt.createComponent(..., Component.PreferSynchronous)` in a
+fresh, private-XDG/DBus Quickshell process. This fixture *does not*
+instantiate `shell.qml`: no DMS bar, lock screen, wallpaper or
+second DMS backend is started. The existing `--offline-probe`
+ShellCore-only mode remains unchanged. The new fixture is
+`DmsShellEntrypointLoadProbe.qml`, still copied as a disposable file
+only into the pinned private DMS checkout.
+
+```sh
+python3 -m unittest discover -s ChatGPT/tests \
+  -p 'test_native_dms_*type_tree.py' -q
+bash ChatGPT/experiments/native-popout/verify_dms_shellcore_type_tree.sh --entry-probe
+```
+
+Expected: `DMS_SHELL_ENTRY_QML_TYPE_TREE_READY: YES`.
+
+**Not yet tested on CachyOS.** A success confirms the entrypoint's
+QML types *can be resolved*, not that DMS has reported readiness,
+opened its bar, communicated with the real backend or maintained
+its plugins. A full isolated startup/reliability test remains
+necessary before any new service switch. The retired
+`SCREENCOPY=OFF` host must never be reactivated.
