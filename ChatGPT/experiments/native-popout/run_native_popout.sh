@@ -149,6 +149,9 @@ if [[ "$relocation" == 1 ]]; then
         exit 1
     fi
     binary="$portable_bin"
+    # The test build's colon-only RUNPATH has empty directory elements;
+    # run with a private, owned working directory, not arbitrary shell CWD.
+    cd -- "$portable_dir"
     echo "DMS_NATIVE_RELOCATION_STAGED: $portable_bin"
     echo "DMS_NATIVE_RELOCATION_SHA256_MATCH: YES"
     echo "DMS_NATIVE_RELOCATION_TEST: actual DMS PluginPopout, offline only"
