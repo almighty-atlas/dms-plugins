@@ -181,3 +181,51 @@ Even a successful result proves only public page rendering inside an
 independent patched Quickshell process. DMS popout lifecycle, focus, browser
 permissions, persistent account login, and an upstream-supported Quickshell
 binary remain separate release gates.
+
+## 7. Wayland layer-shell popout compatibility (offline, opt-in)
+
+The preceding patched Quickshell **ChatGPT page-load test passed** on
+2026-11-10: user screenshot showed the public ChatGPT landing page in a
+separate `FloatingWindow`. This proves the web renderer, not the DMS
+popout's Wayland layer surface.
+
+DMS's native `DPopout` can use a layer-shell-based window; a working
+`FloatingWindow` therefore does **not** yet prove focus or visibility in
+a DMS popout. We next build the **same already-patched private Quickshell
+source**, but with `WAYLAND=ON` and `WAYLAND_WLR_LAYERSHELL=ON`, in a
+**separate** `/tmp/dms-chatgpt-qs-v02-argc1/build-layer` directory:
+
+```sh
+bash ChatGPT/probes/webengine/prepare_quickshell_layershell.sh
+```
+
+The script verifies the pinned upstream commit, the one-line `argc=1`
+patch, and a clean source diff apart from that line. The CMake step does
+not build, install or launch anything. If missing Wayland development
+files cause failure, inspect the first `Could NOT find` or CMake error.
+Do **not** disable a sandbox or modify the installed system Quickshell.
+
+Once configured, build separately:
+
+```sh
+cmake --build /tmp/dms-chatgpt-qs-v02-argc1/build-layer -j2
+```
+
+Then test the Wayland layer-shell QML **only in the patched binary**:
+
+```sh
+timeout --signal=TERM 40s \
+  /tmp/dms-chatgpt-qs-v02-argc1/build-layer/src/quickshell --path \
+  /tmp/dms-chatgpt-webview-probe/ChatGPT/probes/webengine/QuickshellLayerShellProbe.qml
+```
+
+It opens an anchored overlay (not a real DMS popout), displays **offline**
+HTML with marker `DMS_LAYERSHELL_WEBENGINE_LOADED`, and offers an ordinary
+HTML text input. Click inside the input and type a harmless word like
+`test` to check keyboard focus. **No accounts, login or network.** The
+separate process is terminated by `timeout`; do not run the test with
+the system-installed Quickshell binary, which is confirmed `argc=0`.
+If the layer-shell surface doesn't render or cannot receive keyboard
+input, stop and diagnose before attempting any native DMS integration.
+Even success proves only an isolated panel-like layer surface, not the
+actual DMS plugin's animation, popup-manager or lifecycle.

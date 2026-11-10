@@ -226,3 +226,18 @@ Next opt-in gate: render the public ChatGPT landing page in the patched
 Quickshell process with an ephemeral `WebEngineProfile`, without login.
 See `QuickshellChatGPTPageProbe.qml` and the README. Do not treat the
 standalone renderer PASS as final embedded-DMS certification.
+
+## Patched Quickshell: online public page confirmed (2026-11-10)
+
+The user provided a screenshot of the official unauthenticated ChatGPT
+landing page rendered **inside** the separate, patched Quickshell 0.3.2
+`FloatingWindow`. Navigation/sidebar, the chat composer and cookie prompt
+were visible. This is **not** proof that login, chat responses or cookie
+persistence work and **not** a production DMS popout. No login was
+attempted, and the test retained an off-the-record browser profile.
+
+The next experiment is a private Wayland-enabled Quickshell build with
+an offline `PanelWindow` / Wlr layer-shell WebEngine renderer, to check
+whether Niri displays such a window and permits typing into its content.
+The actual DMS popout involves additional DPopout/PluginPopout lifecycle,
+focus, and geometry behavior and remains unverified.

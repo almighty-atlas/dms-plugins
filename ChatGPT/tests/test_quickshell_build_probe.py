@@ -16,6 +16,30 @@ class TestIsolatedQuickshellBuild(unittest.TestCase):
         self.assertNotIn("cmake --install", script)
         self.assertNotIn("systemctl", script)
 
+    def test_layershell_build_is_pinned_and_isolated(self):
+        script = (ROOT / "prepare_quickshell_layershell.sh").read_text()
+        self.assertIn("set -euo pipefail", script)
+        self.assertIn("/tmp/dms-chatgpt-qs-v02-argc1", script)
+        self.assertIn("9b0f339b19057f4731bf3b48293307d7ef241671", script)
+        self.assertIn("-DWAYLAND=ON", script)
+        self.assertIn("-DWAYLAND_WLR_LAYERSHELL=ON", script)
+        self.assertIn('grep -Fq \'auto qArgC = 1;\'', script)
+        self.assertNotIn("cmake --install", script)
+        self.assertNotIn("pacman -S", script)
+        self.assertNotIn("systemctl", script)
+
+    def test_layershell_probe_is_offline_and_interactive(self):
+        qml = (ROOT / "QuickshellLayerShellProbe.qml").read_text()
+        self.assertIn("PanelWindow", qml)
+        self.assertIn("WlrLayershell.keyboardFocus", qml)
+        self.assertIn("WlrKeyboardFocus.OnDemand", qml)
+        self.assertIn("WebEngineView", qml)
+        self.assertIn("type='text'", qml)
+        self.assertIn("DMS_LAYERSHELL_WEBENGINE_LOADED", qml)
+        self.assertNotIn("https://", qml)
+        self.assertNotIn("http://", qml)
+        self.assertNotIn("runJavaScript(", qml)
+
     def test_online_probe_is_ephemeral_and_explicit(self):
         qml = (ROOT / "QuickshellChatGPTPageProbe.qml").read_text()
         self.assertIn("import Quickshell", qml)
