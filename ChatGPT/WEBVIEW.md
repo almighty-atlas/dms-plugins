@@ -127,3 +127,29 @@ now available in [probes/webengine](probes/webengine/README.md). They do not
 change the v0.1 production plugin or registry manifest. A renderer success on
 CachyOS proves only that an independently initialized Qt process works; the
 host-initialization prerequisite for a true DMS popout remains unresolved.
+
+## Host source gate, checked after standalone probe success
+
+The user's CachyOS (Qt Base 6.12.0, Qt WebEngine 6.11.3, Quickshell
+0.3.2) passed the six preflight unit tests and successfully displayed
+the offline `Qt WebEngine is rendering` page, confirmed by screenshot.
+
+The inspected upstream Quickshell launch source creates a `QApplication`
+or `QGuiApplication` but does not explicitly call
+`QtWebEngineQuick::initialize()` or
+`QCoreApplication::setAttribute(Qt::AA_ShareOpenGLContexts)` first.
+**This is a source-level observation, not proof of how every downstream
+Quickshell build is configured.** Qt's WebEngineQuick API requires the
+initialization/attribute before GUI application creation, so we must not
+blindly load a WebEngineView into the live DMS shell.
+
+An optional **online, no-login first-party landing-page check** has been
+added as a separate QML file; instructions:
+[`probes/webengine/README.md`](probes/webengine/README.md).
+It is only a compatibility filter. Even a successful ChatGPT page load
+does not clear the in-process host gate. A compatible upstream Quickshell
+initialization route (or explicitly separate Qt helper) remains necessary
+for further progress.
+
+Official versioned API:
+https://doc.qt.io/qt-6.11/qtwebenginequick.html

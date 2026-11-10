@@ -43,6 +43,17 @@ class PreflightTests(unittest.TestCase):
         self.assertFalse(probe.sandbox_disabled(
             {"QTWEBENGINE_DISABLE_SANDBOX": "false", "QTWEBENGINE_CHROMIUM_FLAGS": "--disable-gpu"}))
 
+    def test_online_probe_is_explicit_ephemeral_and_first_party(self):
+        qml = PATH.with_name("ChatGPTPageProbe.qml").read_text()
+        self.assertIn('url: "https://chatgpt.com/"', qml)
+        self.assertIn("offTheRecord: true", qml)
+        self.assertIn("profile: temporaryProfile", qml)
+        self.assertNotIn("persistentStoragePath", qml)
+        self.assertNotIn("runJavaScript(", qml)
+        self.assertNotIn("WebChannel", qml)
+        self.assertNotIn("Zen", qml.split("import QtQuick")[1])
+        self.assertIn("do not sign in", qml)
+
     def test_offline_qml_and_early_initialization(self):
         qml = PATH.with_name("Probe.qml").read_text()
         self.assertIn("loadHtml(", qml)

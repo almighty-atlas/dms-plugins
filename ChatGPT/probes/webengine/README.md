@@ -36,3 +36,30 @@ or `QTWEBENGINE_DISABLE_SANDBOX` to hide runtime failures.
 in a separate executable on this machine. It is **not** evidence that the
 already-running DMS/Quickshell process meets the initialization requirement.
 Without upstream/host support, a native embedded popout remains blocked.
+
+## 3. Optional ChatGPT page-load check (online, **no login**)
+
+After the offline Qt renderer works, you can use the **same standalone**
+executable to test whether Qt WebEngine is able to display the official
+ChatGPT landing page at all:
+
+```sh
+/tmp/dms-chatgpt-webengine-build/dms-chatgpt-webengine-probe \
+  /tmp/dms-chatgpt-webview-probe/ChatGPT/probes/webengine/ChatGPTPageProbe.qml
+```
+
+**This step makes real network requests to chatgpt.com and its normal page
+dependencies.** It starts only when explicitly invoked, never as part of the
+preflight, existing offline test, or DMS. The temporary Qt profile has
+`offTheRecord: true` and is not your Zen login.
+
+For this first test **do not enter credentials or attempt a login**. Verify
+only whether the ChatGPT landing page appears, or whether you see an error,
+blank view, or unsupported-browser message. Fixed diagnostic markers are
+`DMS_CHATGPT_PAGE_LOAD_SUCCEEDED` and `DMS_CHATGPT_PAGE_LOAD_FAILED`; the
+load-succeeded marker alone does not prove full ChatGPT compatibility.
+The page may load its own third-party resources. Close the window after
+inspection.
+
+Neither this nor the successful offline test proves that a WebEngineView
+can be embedded inside the already-running Quickshell process.
