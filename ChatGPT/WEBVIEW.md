@@ -572,3 +572,40 @@ for WebEngine. There is no sanctioned automatic upgrade/patch
 mechanism yet. A correct production path must be reversible, verify
 the fully featured Qt/QML host and provide safe Zen fallback under
 the installed stock binary. No changes to release v0.1.0 are made.
+
+
+## Confirmed installed host incompatibility and reversible launch approach (2026-11-10)
+
+The user ran the non-destructive `host_preflight.sh --probe` on CachyOS
+and reported three passing static tests. Actual host results:
+
+- Installed `/usr/bin/quickshell`, package `quickshell 0.3.2-1.1`,
+  SHA256 `7796116aa1bf0139df37d023feba9e25ac02650eca678dc2bd4d23e1f09a045f`,
+  returned `DMS_HOST_INSTALLED_ARGC: ZERO_UNSAFE_FOR_WEBENGINE`.
+- Private patched host
+  `/tmp/dms-chatgpt-qs-v02-argc1/build-dms/src/quickshell`,
+  SHA256 `63e258a5b089565b9a93feca02bce7d5dc6602e719d2c66997356643601290f4`,
+  returned `DMS_HOST_PATCHED_ARGC: NONZERO_WEBENGINE_PREREQUISITE_MET`.
+- No WebEngine created by this preflight; no system changes.
+
+**Upstream launch architecture was confirmed in the DMS pinned source**:
+`core/go.mod` uses `github.com/duxlabs-dev/dux-go`
+`v1.6.3-0.20261104145443-699311effba8`, whose
+`shellapp/env.go` invokes
+`exec.CommandContext(ctx, "qs", "-p", a.configPath)` for the frontend.
+This is an executable resolved via the DMS backend's **PATH**, rather than
+an explicit `/usr/bin/quickshell` path. DMS normally supervises that
+frontend as a child process.
+
+**Reversible design direction:** If the user's actual DMS startup uses
+a systemd user service, a *service-scoped* PATH override could select a
+private `qs` launcher instead of changing `/usr/bin/quickshell`.
+If DMS is Niri-started, a Niri startup wrapper could provide the
+equivalent process-scoped PATH. This is only an architecture finding,
+**not an applied change**. The actual startup method, executable
+`qs` resolution, private binary relocation/QML module availability,
+full DMS startup/rollback and Qt version drift still need checking.
+Do not put a replacement `qs` on the general interactive PATH or
+replace the pacman-owned binary. No changes to the user's DMS process,
+systemd units, Niri config, package database or production ChatGPT
+v0.1 plugin have been made.
