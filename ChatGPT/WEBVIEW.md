@@ -676,3 +676,29 @@ approved after the candidate is installed and verified.
 The already authenticated native experiment is **isolated**, not
 enabled as a normal DMS plugin. Never feed the production host a
 WebEngineView while stock quickshell still has argc=0.
+
+## Relocation prerequisite before service-scoped private qs deployment
+
+The user confirmed that live PID 1363 resolves to
+`/usr/bin/quickshell`; the DMS backend's PATH includes
+`/usr/local/sbin:/usr/local/bin:/usr/bin:...`. The patched
+`build-dms/src/quickshell` had no missing libraries in `ldd`,
+and ELF RUNPATH `[::::::::::::::::::::::]`, which has no explicit
+absolute build-tree path. Neither fact alone proves Qt/QML module
+relocatability or lasting stability.
+
+A new explicit offline `--relocation-check` mode stages a verified
+bit-for-bit copy of the patched private binary in
+`/tmp/dms-chatgpt-native-v02/portable-host/quickshell`
+and runs the **real copied DMS PluginPopout** in the previously
+isolated environment. It does **not** use the authenticated test
+profile, install an executable into general PATH, restart the
+live DMS service or modify package-managed files.
+
+The Quickshell build had `INSTALL_QMLDIR`/
+`INSTALL_QML_PREFIX` unset and Qt QML output in the build tree.
+A copied executable may still depend on missing QML module
+artifacts. Only runtime validation can establish whether this
+specific host can be relocated in its present environment.
+A persistent, versioned private installation and user-systemd
+drop-in plus rollback remain separate, later approval gates.
