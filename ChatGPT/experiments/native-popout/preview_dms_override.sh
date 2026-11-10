@@ -17,14 +17,15 @@ private_host="$private_root/host/quickshell"
 unit_dir="$HOME/.config/systemd/user/dms.service.d"
 dropin="$unit_dir/50-chatgpt-private-qs.conf"
 
-for cmd in systemctl readlink readelf ldd sha256sum tr sed grep stat; do
+for cmd in systemctl readlink readelf ldd sha256sum tr sed grep; do
     command -v "$cmd" >/dev/null 2>&1 || {
         echo "DMS_OVERRIDE_PREVIEW_BLOCKED: missing $cmd" >&2
         exit 1
     }
 done
 
-if [[ -z "${HOME:-}" || "$HOME" != /* || ! -O "$HOME" ]] ||
+if [[ -z "${HOME:-}" || "$HOME" != /* || ! -O "$HOME" ||
+      ! "$HOME" =~ ^/[a-zA-Z0-9_./+-]+$ ]] ||
    [[ ! -d "$private_root" || ! -d "$private_bin" ||
       ! -f "$private_qs" || ! -f "$private_host" ||
       ! -x "$private_qs" || ! -x "$private_host" ]]; then
@@ -38,6 +39,18 @@ for f in "$private_root" "$private_root/bin" "$private_root/host" \
         exit 1
     fi
 done
+
+# The wrapper must be the exact reviewed one, not merely an executable.
+# No execution or parsing of untrusted code is needed for this check.
+expected_shim=$(printf '%s\n' \
+  '#!/bin/sh' \
+  'set -eu' \
+  '# PATH resolves this wrapper in a DMS-service-scoped private bin directory.' \
+  'exec "$(dirname -- "$0")/../host/quickshell" "$@"')
+if [[ "$(cat -- "$private_qs")" != "$expected_shim" ]]; then
+    echo "DMS_OVERRIDE_PREVIEW_BLOCKED: private qs wrapper changed" >&2
+    exit 1
+fi
 
 if readelf -d "$private_host" | grep -Eq '\((RPATH|RUNPATH)\)'; then
     echo "DMS_OVERRIDE_PREVIEW_BLOCKED: private host has RPATH/RUNPATH" >&2
