@@ -93,3 +93,23 @@ runtime compatibility; it is only the next prerequisite check.
 
 Do not launch the experimental native harness until the missing modules,
 isolated XDG variables and DMS service side effects have been reviewed.
+
+## DMS-QML-kompatiblen Quickshell-Testbuild vorbereiten
+
+Der User-Audit (10.11.2026): vier Tests bestanden, **1.033 QML-Dateien**, zehn
+Modulgruppen im vorherigen Testbuild deaktiviert und keine unbekannten.
+
+```sh
+bash ChatGPT/experiments/native-popout/prepare_quickshell_dms.sh
+```
+
+Der neue `build-dms` wird separat unter `/tmp` konfiguriert. Das Skript
+verifiziert den gepinnten Upstream-Stand und exakt die eine `argc=1`-Änderung,
+prüft Polkit/PipeWire-Entwicklungsbibliotheken und aktiviert die zehn fehlenden
+QML-Modulgruppen. Fehlende Bibliotheken erscheinen als
+`DMS_HOST_DEPENDENCY_MISSING`. **Keine Installation, kein DMS-Start.**
+
+Wenn `DMS_HOST_CONFIGURED` erscheint, kann der neue Build anschließend
+mit `cmake --build /tmp/dms-chatgpt-qs-v02-argc1/build-dms -j2` kompiliert
+werden. Der native Popout-Harness darf bis zur Prüfung isolierter XDG-Pfade,
+QML-Module und DMS-Singleton-Nebenwirkungen **nicht** gestartet werden.

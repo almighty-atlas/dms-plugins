@@ -347,3 +347,14 @@ optional/dormant DMS features are included, unrecognized QML modules are
 reported as unknown and no actual runtime compatibility is assumed.
 The audit must be executed on CachyOS before deciding which optional
 Quickshell modules to rebuild. No test harness is being launched yet.
+
+## Host-Module: DMS-Import-Audit ausgewertet (10.11.2026)
+
+1033 DMS-QML-Dateien: zehn optionale Quickshell-Modulgruppen im reduzierten
+`build-layer` deaktiviert (Bluetooth, Hyprland, I3, MPRIS, Notifications,
+PAM, PipeWire, Polkit, SystemTray, UPower), **keine unbekannten Imports**.
+Ein separater `build-dms`-Konfigurator aktiviert diese und relevante
+Unterkomponenten. Er prüft die exakt einzeilige gepatchte Quickshell-Quelle
+sowie Polkit/PipeWire-Entwicklungsabhängigkeiten, ohne zu installieren oder
+Prozesse zu starten. Das ist nur ein Quell-/Build-Gate. Die QML-Laufzeit,
+DMS-Singleton-Effekte, Desktop-Isolation und der echte Popout bleiben offen.
