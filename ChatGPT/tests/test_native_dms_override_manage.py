@@ -17,6 +17,7 @@ class ManagedDmsOverrideTests(unittest.TestCase):
         for mode in ('"--activate"', '"--confirm"', '"--rollback"'):
             self.assertIn(mode, SH)
         self.assertIn('if [[ ! -t 0 ]]', SH)
+        self.assertIn('"/proc/$BASHPID/cgroup"', SH)
         self.assertIn("Type ACTIVATE to continue", SH)
         self.assertIn('if [[ "$answer" != ACTIVATE ]]', SH)
 
