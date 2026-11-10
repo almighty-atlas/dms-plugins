@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Bounded full DMS QML instantiation in a SECOND headless Niri compositor.
-# No dms backend, login, real Niri socket, systemd changes or package writes.
+# Bounded full DMS QML instantiation: private headless Weston -> nested Niri.
+# No DMS backend, login, real Niri socket, systemd changes or package writes.
 set -euo pipefail
 umask 077
 
@@ -20,9 +20,9 @@ inner="$script_dir/run_dms_headless_niri_inner.sh"
 dms_pin=e46ccbc1d58930d6a189cd1c90b276db2d64bf42
 common_pin=0877466a25b8e191a865bf75d0e500de6351ae04
 
-for tool in niri git python3 timeout dbus-run-session mktemp grep; do
+for tool in weston niri git python3 timeout dbus-run-session mktemp grep; do
     if ! command -v "$tool" >/dev/null 2>&1; then
-        echo "DMS_HEADLESS_BLOCKED: missing $tool" >&2
+        echo "DMS_HEADLESS_BLOCKED: missing $tool (Weston headless parent required for Niri v26.04)" >&2
         exit 1
     fi
 done
@@ -61,6 +61,7 @@ for dir in home runtime config data cache state; do
 done
 # Niri MUST use this explicit private config. Empty config intentionally
 # contains no spawn-at-startup, binds, environment imports or user rules.
+# Weston also uses --no-config, preventing inherited Weston plugins.
 printf '%s\n' '// Private headless Niri for an isolated, bounded DMS test.' > "$private/config/niri.kdl"
 fixture=$(mktemp "$qml_root/DmsHeadlessShell_XXXXXXXX.qml")
 
@@ -84,7 +85,7 @@ if source.count(a) != 1 or source.count(c) != 1:
 Path(sys.argv[2]).write_text(source.replace(a, b).replace(c, d), encoding="utf-8")
 PY
 
-echo "DMS_HEADLESS_NIRI_PROBE: separate headless compositor, no --session"
+echo "DMS_HEADLESS_NIRI_PROBE: Weston headless -> nested Niri, no --session"
 echo "DMS_HEADLESS_DMS_BACKEND: DISCONNECTED_BY_DESIGN"
 echo "DMS_HEADLESS_LIVE_NIRI_SOCKET: NOT_FORWARDED"
 # env -i prevents inherited session/process IPC, graphics overrides,
@@ -95,14 +96,14 @@ status=0
     HOME="$private/home" XDG_RUNTIME_DIR="$private/runtime" \
     XDG_CONFIG_HOME="$private/config" XDG_DATA_HOME="$private/data" \
     XDG_CACHE_HOME="$private/cache" XDG_STATE_HOME="$private/state" \
-    XDG_CURRENT_DESKTOP="niri-headless-test" XDG_SESSION_TYPE="wayland" \
-    NIRI_BACKEND="headless" NIRI_CONFIG="$private/config/niri.kdl" \
+    XDG_CURRENT_DESKTOP="niri-weston-headless-test" XDG_SESSION_TYPE="wayland" \
+    NIRI_CONFIG="$private/config/niri.kdl" \
     WAYLAND_DISPLAY="" NIRI_SOCKET="" DMS_SOCKET="" NOTIFY_SOCKET="" \
     DBUS_SYSTEM_BUS_ADDRESS="unix:path=$private/runtime/no-system-bus" \
     QT_QPA_PLATFORM="wayland" GSETTINGS_BACKEND="memory" \
     DMS_DISABLE_HOT_RELOAD="1" \
     dbus-run-session -- \
-    timeout --signal=TERM --kill-after=5s 38s \
+    timeout --signal=TERM --kill-after=5s 52s \
     /usr/bin/bash "$inner" --inner "$private" "$binary" "$fixture" || status=$?
 
 if [[ "$status" != 0 ]]; then
