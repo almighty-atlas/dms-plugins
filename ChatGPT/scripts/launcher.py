@@ -179,7 +179,7 @@ def launch(args, timeout=20):
                 if code is not None and code != 0:
                     raise Failure("Zen wurde beendet, ohne ein dediziertes Fenster bereitzustellen. Installation/Profil prüfen.")
                 time.sleep(0.2)
-            raise Failure("Nach 20 Sekunden kein isoliertes Zen-Fenster erkannt. Zen/Onboarding und Profilprozess prüfen (niri msg pick-window). Kein weiterer Start bei laufendem Profil.")
+            raise Failure("Nach 20 Sekunden kein Fenster des isolierten Zen-Profils erkannt. Zen/Onboarding und Profilprozess prüfen (niri msg pick-window). Kein weiterer Start bei laufendem Profil.")
 
         # Optional fallbacks: never modify or theme the normal browser profile.
         can_query = bool(shutil.which("niri") and os.environ.get("NIRI_SOCKET"))
