@@ -528,3 +528,30 @@ This result does not remove the hard blocker: the installed stock
 Quickshell host has `argc=0` while the isolated patched
 host has `argc=1`; the v0.1 Zen launcher remains the safe
 production fallback and this PR remains Draft.
+
+## Streaming continues across hidden native DMS popup (user-confirmed, 2026-11-10)
+
+The user ran the prescribed authenticated, harmless test: request a
+50-sentence Linux response, close the real DMS `PluginPopout` while
+generation was underway, then reopen it. They reported **"ja,
+funktioniert"**, confirming the response continued/persisted across
+popup hide/show in this particular patched, isolated DMS experiment.
+
+This confirms a functioning popup hide/show interaction during active
+ChatGPT message generation, **as observed by the user**. No new
+lifecycle trace or Chromium network log was supplied; therefore do not
+claim more specific facts about WebEngineView object lifetime,
+WebSocket/SSE implementation, or recovery from terminating the
+Quickshell process mid-stream. Do not rely on the result as a
+guarantee for arbitrary browser tabs, pending uploads or long-running
+generations.
+
+The remaining release blocker is host compatibility: the installed
+Quickshell was confirmed to provide `argc=0` and must not instantiate
+a `WebEngineView` without a reviewed and reversible host fix.
+The successful `argc=1` test binary is a private build under `/tmp`,
+**not** the system-installed process. The production Zen-v0.1 widget
+remains unchanged. Native plugin mode requires explicit feature
+gating, safe fallback, verified QML-module compatibility, startup
+and update integration, rollback, and user approval before any
+system changes.
