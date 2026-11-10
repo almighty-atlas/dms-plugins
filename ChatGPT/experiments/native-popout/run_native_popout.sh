@@ -7,6 +7,7 @@ umask 077
 online=0
 persistent=0
 auth=0
+relocation=0
 duration=60s
 if [[ "$#" == 0 ]]; then
     : # default: local HTML only
@@ -19,8 +20,10 @@ elif [[ "$#" == 1 && "$1" == "--auth-chatgpt" ]]; then
     online=1
     auth=1
     duration=300s
+elif [[ "$#" == 1 && "$1" == "--relocation-check" ]]; then
+    relocation=1
 else
-    echo "Usage: run_native_popout.sh [--public-chatgpt|--persistent-chatgpt|--auth-chatgpt]" >&2
+    echo "Usage: run_native_popout.sh [--public-chatgpt|--persistent-chatgpt|--auth-chatgpt|--relocation-check]" >&2
     exit 2
 fi
 
@@ -120,6 +123,36 @@ done
 }
 mkdir -p -m 700 "$root/runtime"
 chmod 700 "$root/runtime"
+
+# Verify the private built executable still functions when launched from
+# a DIFFERENT path. The test uses local offline HTML, never the auth profile.
+# No /usr/bin, PATH, systemd, DMS backend or package changes occur here.
+if [[ "$relocation" == 1 ]]; then
+    portable_dir="$root/portable-host"
+    portable_bin="$portable_dir/quickshell"
+    if [[ -L "$portable_dir" || ( -e "$portable_dir" && ! -O "$portable_dir" )
+          || -L "$portable_bin" || ( -e "$portable_bin" && ! -O "$portable_bin" ) ]]; then
+        echo "DMS_NATIVE_RELOCATION_BLOCKED: unsafe private staging path" >&2
+        exit 1
+    fi
+    mkdir -p -m 700 "$portable_dir"
+    chmod 700 "$portable_dir"
+    install -m 700 "$binary" "$portable_bin"
+    original_hash=$(sha256sum "$binary" | cut -d' ' -f1)
+    portable_hash=$(sha256sum "$portable_bin" | cut -d' ' -f1)
+    if [[ "$original_hash" != "$portable_hash" ]]; then
+        echo "DMS_NATIVE_RELOCATION_BLOCKED: staged executable hash mismatch" >&2
+        exit 1
+    fi
+    if ldd "$portable_bin" | grep -Fq "not found"; then
+        echo "DMS_NATIVE_RELOCATION_BLOCKED: missing shared library in private copy" >&2
+        exit 1
+    fi
+    binary="$portable_bin"
+    echo "DMS_NATIVE_RELOCATION_STAGED: $portable_bin"
+    echo "DMS_NATIVE_RELOCATION_SHA256_MATCH: YES"
+    echo "DMS_NATIVE_RELOCATION_TEST: actual DMS PluginPopout, offline only"
+fi
 
 if [[ "$auth" == 1 ]]; then
     echo "DMS_NATIVE_AUTH_TEST: isolated login permitted; 300 second timeout"
