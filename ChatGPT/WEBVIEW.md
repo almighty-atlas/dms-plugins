@@ -859,3 +859,27 @@ type resolution succeeds; full production readiness, startup,
 Qt/WebEngine compatibility, and stable private host installation
 remain untested. Keep the old broken host activation blocked and
 PR in Draft.
+
+## Full ShellCore.qml QML component graph passed; shell.qml entry next
+
+The user's new Screencopy-enabled, patched host passed the
+**real** pinned DMS `ShellCore.qml` component type graph:
+5/5 local source tests and
+`DMS_SHELLCORE_QML_TYPE_TREE_READY: YES`.
+No instantiation, DMS service restart or authentication occurred.
+
+A new `DmsShellEntrypointLoadProbe.qml` and opt-in
+`verify_dms_shellcore_type_tree.sh --entry-probe` now check the
+**full root `shell.qml` type graph**, rather than only ShellCore.
+The process uses the same private D-Bus/XDG, pinned DMS source,
+blank DMS/Niri socket environment, and separate Screencopy-enabled
+host. It does **not** instantiate the root component or duplicate
+running panels. Four new source/syntax tests in
+`test_native_dms_shell_entry_type_tree.py` are prepared.
+**Execution pending** on the user's CachyOS system.
+
+Even a successful result still does not prove the startup readiness
+handshake, actual Wayland window behavior, production plugin
+compatibility or browser stability. A nested/compositor-isolated full
+launch, if feasible, must be designed separately before we attempt
+a new live DMS host upgrade. The previous host remains blocked.
