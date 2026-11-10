@@ -556,3 +556,67 @@ automatic rollback is expected after 10 minutes; it causes a second
 DMS restart. **Do not run activation just to inspect settings.**
 The original Zen ChatGPT v0.1 plugin remains unchanged: changing the
 host alone does not enable native ChatGPT in the production widget.
+
+## Full DMS failure diagnosed: Screencopy disabled, new isolated build required (2026-11-10)
+
+The user provided the **failed service invocation** log after a manually
+successful rollback. The decisive error is
+`@Modals/DLauncherV2/TileItem.qml[71:13]: ScreencopyView is not a type`
+(with a cascading unavailable-Frame chain), followed by
+`shell readiness timed out: UI did not report readiness`.
+The user's exact installed old test-build CMake flags confirm
+`SCREENCOPY:BOOL=OFF` while `WAYLAND=ON` and
+`SCREENCOPY_ICC/WLR/HYPRLAND_TOPLEVEL=ON`. The parent flag being OFF
+prevents `ScreencopyView` from being compiled into
+`Quickshell.Wayland._Screencopy`.
+
+**The previously tested service-switch candidate is retired.**
+The branch's old `manage_dms_override.sh --activate` is now
+fail-closed; its `--confirm` and `--rollback` recovery paths are
+preserved. Note that an **earlier controller copy** under the user's
+versioned `control/` directory may still be the previous script,
+but MUST NOT be used to activate the retired host.
+The production rollback left `dms.service` active and
+`DropInPaths` empty.
+
+New, separate, *configure-only* command:
+
+```bash
+bash ChatGPT/experiments/native-popout/prepare_quickshell_dms_screencopy.sh
+```
+
+It uses the exact pinned, single-line argc=1-patched Quickshell source
+but configures a new build tree
+`/tmp/dms-chatgpt-qs-v02-argc1/build-dms-screencopy-v01`.
+It requires the GBM pkg-config library, Vulkan headers, and earlier
+DMS dependencies, turns ON both parent `SCREENCOPY` and
+`SCREENCOPY_ICC/WLR/HYPRLAND_TOPLEVEL` CMake flags, and retains
+all other options from the original DMS-oriented build.
+It does not overwrite or reconfigure `build-dms`; no
+production/DMS/systemd/Pacman modifications are performed.
+
+Build only this new tree, after successful configuration:
+
+```bash
+cmake --build /tmp/dms-chatgpt-qs-v02-argc1/build-dms-screencopy-v01 -j2
+```
+
+Then run the new **offline-only, isolated** type-instantiation
+runtime probe. It creates an inert `ScreencopyView` with
+`captureSource: null` and `live: false`, rather than capturing
+a real screen or launching the entire running DMS service:
+
+```bash
+bash ChatGPT/experiments/native-popout/verify_quickshell_screencopy.sh --offline-probe
+```
+
+Expected marker: `DMS_SCREENCOPY_QML_READY: YES`.
+This proves only that the required type can be loaded and instantiated;
+it is **not** a full DMS UI readiness, production WebEngine,
+monitor, capture, or plugin compatibility test.
+
+The previous staged host SHA256 and `stage_private_host.sh` are
+intentionally **not** updated to the new executable yet: the new
+build's checksum and its behavior must be validated first, before
+considering a *new* versioned stage and a separate live deployment
+plan. Do not run any existing `--activate`.
