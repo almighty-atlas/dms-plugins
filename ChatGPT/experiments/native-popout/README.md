@@ -71,3 +71,25 @@ popout remains **unverified**.
 
 Do not enable online navigation/login until the popout focus, profile
 ownership, lifecycle and host compatibility gates pass.
+
+## Prepared DMS vs patched Quickshell import audit
+
+The private DMS source copy is now prepared on CachyOS
+(`DMS_NATIVE_SANDBOX_PREPARED` and 4/4 static regression tests).
+Before trying any QML runtime or changing build flags, run the purely
+**read-only** module audit:
+
+```sh
+python3 ChatGPT/experiments/native-popout/check_host_imports.py
+```
+
+It reads only the fixed `/tmp/dms-chatgpt-native-v02/dux-shell/quickshell`
+QML files and `/tmp/dms-chatgpt-qs-v02-argc1/build-layer/CMakeCache.txt`.
+It scans all DMS QML files (including dormant features), reports which
+`Quickshell.*` modules are disabled in the isolated build, and explicitly
+labels unmapped modules as unknown. No shell, DMS daemon, browser, website,
+or test popout is launched. A module-flag match **does not guarantee**
+runtime compatibility; it is only the next prerequisite check.
+
+Do not launch the experimental native harness until the missing modules,
+isolated XDG variables and DMS service side effects have been reviewed.

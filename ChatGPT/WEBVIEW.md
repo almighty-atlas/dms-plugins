@@ -335,3 +335,15 @@ second full DMS shell connected to the existing backend.
 Qt references:
 https://doc.qt.io/qt-6/qml-qtwebengine-webengineprofileprototype.html
 https://doc.qt.io/qt-6.11/qml-qtwebengine-webengineview.html
+
+## Source-wide DMS Quickshell module audit (prepared; runtime not started)
+
+The user confirmed the private DMS 2.0 source checkout and experimental
+native-popout QML were prepared without changing the active desktop.
+An additional offline `check_host_imports.py` compares all QML
+`import Quickshell.*` statements with the **isolated** patched
+`build-layer/CMakeCache.txt`. The analysis is deliberately conservative:
+optional/dormant DMS features are included, unrecognized QML modules are
+reported as unknown and no actual runtime compatibility is assumed.
+The audit must be executed on CachyOS before deciding which optional
+Quickshell modules to rebuild. No test harness is being launched yet.
