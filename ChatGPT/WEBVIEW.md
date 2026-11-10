@@ -828,3 +828,34 @@ ScreencopyView runtime probe on the user's CachyOS system.
 The old SHA256-pinned host installer and systemd candidate are
 not repointed. Even if the probe passes, a full, separate DMS
 readiness test remains necessary before another production switch.
+
+## Screencopy type test passed; non-instantiating full ShellCore QML gate next
+
+The user supplied successful CMake output for the separate
+`build-dms-screencopy-v01` (Screencopy plus ICC/WLR/Hyprland toplevel
+all ON) and the runtime marker
+`DMS_SCREENCOPY_QML_READY: YES`. Vulkan headers were already
+present; pacman skipped installation. Warnings about QML install
+prefix and disabled `quickshell-networkplugin` remain noted, but
+there is no evidence they caused the previous failure.
+
+To validate more than an individual `ScreencopyView`, new
+`DmsShellCoreLoadProbe.qml` calls
+`Qt.createComponent(Qt.resolvedUrl("ShellCore.qml"),
+Component.PreferSynchronous)` and **does not create** the resulting
+object. `verify_dms_shellcore_type_tree.sh --offline-probe`
+loads it under the separate new Quickshell build using pinned
+DMS/DCommon sources and isolated HOME/XDG/private DBus, with
+`DMS_SOCKET` and `NIRI_SOCKET` unset. It imports the same DMS
+ShellCore dependency tree that failed in production, without
+starting the real shell, duplicating bars or talking to the DMS
+backend.
+
+Five static and Bash-syntax tests in
+`test_native_dms_shellcore_type_tree.py` are prepared; the new
+runtime check has **not** yet been executed on CachyOS. Expected
+result `DMS_SHELLCORE_QML_TYPE_TREE_READY: YES` means only QML
+type resolution succeeds; full production readiness, startup,
+Qt/WebEngine compatibility, and stable private host installation
+remain untested. Keep the old broken host activation blocked and
+PR in Draft.
