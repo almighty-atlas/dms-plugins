@@ -994,3 +994,35 @@ shell-ready IPC emission against a local mock, not
 production Go-backend readiness or full plugin operation.
 Further portably staged deployment and explicit rollback
 protection are still required. PR remains Draft.
+
+## All isolated gates including mock shell.ready passed; corrected v02 staging next
+
+User successfully executed
+`run_dms_headless_niri.sh --mock-backend-probe`. The second
+headless Weston -> nested Niri -> corrected Quickshell frontend
+reported both full QML loader markers, zero detected type errors
+and **`DMS_HEADLESS_MOCK_SHELL_READY_RECEIVED: YES`**. Only a
+private synthetic backend was connected; the real dms.service and
+user desktop were untouched. Portal GTK warnings occurred inside
+the disconnected DBus session and were non-blocking.
+
+A new `stage_private_screencopy_host.sh --stage|--verify`
+does not reuse or replace the old broken SCREENCOPY=OFF v01
+candidate. It stages the separate, corrected executable into
+`~/.local/share/dms-chatgpt-native-host/9b0f339-argc1-screencopy-v02`,
+cleans RPATH/RUNPATH only on that copy, records a SHA256 manifest,
+and creates an exact `bin/qs` wrapper. It enforces the pinned
+argc source patch, all required Screencopy build flags, ownership
+and basic linkage, and refuses to replace an existing version.
+
+New `run_native_popout.sh --screencopy-staged-host-check`
+uses only that staged executable and the existing genuine DMS
+popout with **offline HTML**, separate XDG/DBus contexts and
+no DMS/Niri backend sockets. The old authorized auth/profile
+modes remain unchanged. Six source/syntax tests are included.
+
+**Not yet run** on user's CachyOS host. Success would establish
+private-binary relocation and WebEngine compatibility but NOT
+production or backend integration. The old v01 systemd activation
+is still disabled; a new reviewed, fail-closed v02 controller
+and real-service recovery readiness gate are still prerequisites.
