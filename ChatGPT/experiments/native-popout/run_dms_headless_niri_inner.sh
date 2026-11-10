@@ -5,17 +5,20 @@
 set -euo pipefail
 umask 077
 
-if [[ "$#" != 4 || "$1" != "--inner" ]]; then
+if [[ "$#" != 6 || "$1" != "--inner" || ( "$5" != "0" && "$5" != "1" ) ]]; then
     echo "DMS_HEADLESS_INNER_BLOCKED: controlled invocation required" >&2
     exit 2
 fi
 private="$2"
 binary="$3"
 fixture="$4"
+mock_mode="$5"
+mock_script="$6"
 if [[ -L "$private" || -L "$fixture" || ! -d "$private" ||
       ! -O "$private" || ! -f "$fixture" || ! -O "$fixture" ||
       ! -f "$binary" || ! -O "$binary" || ! -x "$binary" ||
       -n "${NIRI_BACKEND:-}" ||
+      ( "$mock_mode" == "1" && ( -L "$mock_script" || ! -f "$mock_script" || ! -O "$mock_script" ) ) ||
       "${XDG_RUNTIME_DIR:-}" != "$private/runtime" ||
       "${DMS_SOCKET-something}" != "" ||
       "${NOTIFY_SOCKET-something}" != "" ||
@@ -31,7 +34,12 @@ fi
 
 weston_pid=
 niri_pid=
+mock_pid=
 cleanup_inner() {
+    if [[ -n "$mock_pid" ]]; then
+        kill -TERM "$mock_pid" 2>/dev/null || true
+        wait "$mock_pid" 2>/dev/null || true
+    fi
     if [[ -n "$niri_pid" ]]; then
         kill -TERM "$niri_pid" 2>/dev/null || true
         wait "$niri_pid" 2>/dev/null || true
@@ -90,11 +98,37 @@ fi
 echo "DMS_HEADLESS_NIRI_PRIVATE_SOCKET_READY"
 echo "DMS_HEADLESS_NIRI_NO_SESSION_IMPORT"
 echo "DMS_HEADLESS_NIRI_NESTED_WITHIN_WESTON"
+
+# The MOCK uses only a socket directly under the private test runtime.
+# No real DMS daemon, systemd socket, or user backend is reachable.
+dms_socket=
+notify_socket=
+mock_marker="$private/runtime/dms-shell-ready.marker"
+if [[ "$mock_mode" == 1 ]]; then
+    dms_socket="$private/runtime/dms-mock.sock"
+    notify_socket="$private/runtime/notify-unused.sock"
+    /usr/bin/python3 "$mock_script" --socket "$dms_socket" \
+        --marker "$mock_marker" --duration 25 \
+        > "$private/mock-dms.log" 2>&1 &
+    mock_pid=$!
+    for ((i=0; i<50; i++)); do
+        [[ -S "$dms_socket" ]] && break
+        if ! kill -0 "$mock_pid" 2>/dev/null; then break; fi
+        sleep 0.1
+    done
+    if [[ ! -S "$dms_socket" ]]; then
+        echo "DMS_HEADLESS_MOCK_START_FAILED: private socket absent" >&2
+        grep -E 'DMS_MOCK|Error|error|Traceback' "$private/mock-dms.log" | tail -n 20 || true
+        exit 1
+    fi
+    echo "DMS_HEADLESS_MOCK_PRIVATE_SOCKET_READY"
+fi
 status=0
 
 # Reuse the private D-Bus session and all private XDG paths, but expose
 # ONLY this nested Niri's Wayland/IPC sockets to the test frontend.
 WAYLAND_DISPLAY="$socket" NIRI_SOCKET="$nested_niri" \
+    DMS_SOCKET="$dms_socket" NOTIFY_SOCKET="$notify_socket" \
     timeout --signal=TERM --kill-after=3s 16s \
     "$binary" --path "$fixture" > "$private/quickshell.log" 2>&1 || status=$?
 
@@ -112,5 +146,16 @@ fi
 echo "DMS_HEADLESS_ENTRY_INSTANTIATED: YES"
 echo "DMS_HEADLESS_DMSSHELL_LOADED: YES"
 echo "DMS_HEADLESS_FULL_UI_TYPE_ERRORS: NONE_DETECTED"
-echo "DMS_HEADLESS_BACKEND_READY: NOT_TESTED (private DMS_SOCKET empty)"
+if [[ "$mock_mode" == 1 ]]; then
+    if [[ ! -f "$mock_marker" ]] ||
+       [[ "$(cat "$mock_marker")" != "DMS_MOCK_SHELL_READY_RECEIVED" ]]; then
+        echo "DMS_HEADLESS_MOCK_READY_FAILED: no shell.ready recorded" >&2
+        grep -E 'DMS_MOCK|DMSService|shell.ready|Connected' "$private/mock-dms.log" "$private/quickshell.log" | tail -n 30 || true
+        exit 1
+    fi
+    echo "DMS_HEADLESS_MOCK_SHELL_READY_RECEIVED: YES"
+    echo "DMS_HEADLESS_BACKEND_READY: MOCK_PROTOCOL_ONLY"
+else
+    echo "DMS_HEADLESS_BACKEND_READY: NOT_TESTED (private DMS_SOCKET empty)"
+fi
 echo "DMS_HEADLESS_NO_LIVE_NIRI_OR_DMS_CHANGES"
