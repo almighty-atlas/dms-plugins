@@ -288,3 +288,50 @@ Reviewed upstream files:
 https://github.com/duxlabs-dev/dux-shell/blob/master/quickshell/Modules/Plugins/PluginComponent.qml
 https://github.com/duxlabs-dev/dux-shell/blob/master/quickshell/Modules/Plugins/PluginPopout.qml
 https://github.com/duxlabs-dev/dux-shell/blob/master/quickshell/Widgets/DPopout.qml
+
+## Experimental DMS-native popout candidate staged (2026-11-10)
+
+Implemented an **offline-only**, manually invoked source candidate under
+[`experiments/native-popout/`](experiments/native-popout/README.md):
+
+- Real DMS `PluginComponent` / `PopoutComponent` and built-in
+  `PluginPopout` on click, not a lookalike custom `PanelWindow`.
+- Uses `WebEngineProfilePrototype` from Qt WebEngine >=6.9 to create a
+  distinct disk-backed profile owned by the widget rather than the
+  ephemeral popout content. Persistent cookies are limited to those
+  marked persistent, and permission requests are rejected.
+- Only a local HTML page with a keyboard test field. No ChatGPT network
+  requests, account login, WebChannel, scripts, or data extraction.
+- Intentionally **no experiment plugin.json** and **no references from
+  the production Widget.qml / Settings.qml / plugin.json**. Neither
+  stock Quickshell nor the currently installed DMS has been modified.
+- A source-preparation script fetches DMS commit
+  `e46ccbc1d58930d6a189cd1c90b276db2d64bf42` into a new private
+  `/tmp` directory and copies the candidate there. It does not start
+  DMS, connect to a daemon, install anything, or modify the user's config.
+- Four structural tests passed in local development. **QML runtime
+  loading, popup layout, keyboard focus, re-opening and profile behavior
+  in actual DMS remain unverified.**
+
+### Additional host compatibility gate
+
+The DMS `shell.qml` source includes `//@ pragma RenderControl`, while
+Qt 6.11's WebEngineView documentation cautions that rendering into a
+`QQuickRenderControl` OpenGL surface can fail due to context sharing.
+This is **not proof** that DMS's actual popout uses that rendering path:
+the Quickshell 0.3.2 build has not yet been examined to determine whether
+it recognizes or uses the pragma. Test the real DMS popup backend
+rather than inferring compatibility from our successful standalone
+layer-shell test. Do not patch private Qt graphics functions or
+disable the WebEngine sandbox.
+
+The existing reduced patched `build-layer` excludes some Quickshell
+modules (e.g. `Quickshell.I3` and `Quickshell.Hyprland`) that DMS
+imports. Therefore the candidate is **not yet safe to launch** using
+that binary without a separate compatibility check/build. Do not run
+the user's actual DMS against the experimental binary or launch a
+second full DMS shell connected to the existing backend.
+
+Qt references:
+https://doc.qt.io/qt-6/qml-qtwebengine-webengineprofileprototype.html
+https://doc.qt.io/qt-6.11/qml-qtwebengine-webengineview.html
