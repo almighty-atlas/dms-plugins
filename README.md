@@ -20,6 +20,7 @@
 |--------|----|-------------|
 | [GW2 Boss Timer](./GW2BossTimer) | `gw2BossTimer` | Shows upcoming Guild Wars 2 world boss spawns with countdown timers in the DankBar |
 | [YouTube Search](./YouTube) | `youtubeSearch` | Search, local bookmarks/history, and persistent mpv video/audio queues; requires `yt-dlp` |
+| [ChatGPT Web](./ChatGPT) | `chatgptWeb` | Launch ChatGPT from DankBar via Zen, with an optional DMS-colored dedicated browser profile |
 
 ## Installation
 
@@ -54,12 +55,19 @@ dms restart
 .
 ├── plugins/                 # registry entries (one JSON file per plugin)
 │   ├── gw2-boss-timer.json
-│   └── youtube-search.json
+│   ├── youtube-search.json
+│   └── chatgpt-web.json
 ├── GW2BossTimer/            # plugin sources
 │   ├── plugin.json
 │   ├── Widget.qml
 │   ├── Settings.qml
 │   └── README.md
+├── ChatGPT/                 # ChatGPT site launcher, optional themed Zen profile
+│   ├── plugin.json
+│   ├── Widget.qml
+│   ├── Settings.qml
+│   ├── scripts/
+│   └── AGENT_PROMPT.md
 ├── YouTube/                 # local YouTube companion
 │   ├── plugin.json
 │   ├── Widget.qml

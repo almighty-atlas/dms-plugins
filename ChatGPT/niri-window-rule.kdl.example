@@ -1,0 +1,11 @@
+// Optional. Insert into ~/.config/niri/config.kdl and adapt app-id.
+// Detect actual values via: niri msg pick-window
+// WARNING: title may initially be "Zen Browser" during startup;
+// avoid matching every Zen window, which would float unrelated windows.
+window-rule {
+    match app-id=r#"^(zen|zen-alpha|io\.github\.zen_browser\.zen)$"# title="ChatGPT"
+    open-floating true
+    default-column-width { fixed 760; }
+    default-window-height { fixed 860; }
+    default-floating-position x=24 y=24 relative-to="top-right"
+}

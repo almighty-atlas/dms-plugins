@@ -1,0 +1,13 @@
+{
+  "id": "chatgptWeb",
+  "name": "ChatGPT Web",
+  "description": "Open ChatGPT from DankBar with optional Zen profile and DMS-colored website CSS",
+  "version": "0.1.0",
+  "author": "almighty-atlas",
+  "type": "widget",
+  "capabilities": ["dankbar-widget"],
+  "component": "./Widget.qml",
+  "settings": "./Settings.qml",
+  "icon": "smart_toy",
+  "permissions": ["process", "settings_read", "settings_write"]
+}
