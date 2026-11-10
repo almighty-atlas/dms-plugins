@@ -82,6 +82,27 @@ class ThemeTests(unittest.TestCase):
             self.assertNotIn("MainContentSurface-EnuIYE", css)
             self.assertNotIn("_R_ldj6nl9iqr7dcchej9arad5_", css)
 
+    def test_authenticated_chat_composer_sidebar_and_code_surfaces(self):
+        # Two sanitized DOM exports (451 px viewport) found these stable
+        # semantic selectors. No chat text or raw exports are committed.
+        for colors, mode in ((theme.DEFAULTS, "dark"), (theme.LIGHT, "light")):
+            css = theme.render_css(colors, mode)
+            for selector in (
+                "html.chatgpt-theme aside.app-shell-left-panel",
+                "html.chatgpt-theme aside .sidebar-item:hover",
+                "html.chatgpt-theme .bg-surface",
+                'html.chatgpt-theme form:has(.ProseMirror[role="textbox"])',
+                "html.chatgpt-theme .bg-composer-primary",
+                "html.chatgpt-theme .bg-user-message",
+                "html.chatgpt-theme main .chatgpt-code-scrollport",
+            ):
+                self.assertIn(selector, css)
+            # No build-generated class hashes or individual DOM IDs.
+            for volatile in ("MainContentSurface-EnuIYE", "CodeBlock-zu1QM3",
+                             "Root-iW7ipz", "_R_ldj6nl9iqr7dcchej9arad5_"):
+                self.assertNotIn(volatile, css)
+            self.assertIn("color-mix(in srgb, var(--dms-primary)", css)
+
     def test_idempotent_sync_and_reversible_settings(self):
         theme.sync()
         profile = theme.profile_path()

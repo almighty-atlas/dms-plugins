@@ -182,3 +182,25 @@ API usage, paid service or automatic PR merge is part of these tests.
 - The new CSS override explicitly colors `html.chatgpt-theme` and its MAIN
   using the DMS background token, scoped to `https://chatgpt.com/`.
   **Visual correctness after profile restart is still unverified.**
+
+## Authenticated CSS diagnostics – 2026-11-10
+
+Two sanitized user-exported JSON snapshots were inspected locally (**not
+committed**). Each was captured at a 451×1376 CSS-pixel viewport. They contain
+352 and 351 sampled elements respectively, not a full DOM tree; a limit in
+the export script and truncated ancestor references prevent claiming exhaustive
+coverage.
+
+Observed stable/semantic surfaces: `aside.app-shell-left-panel`,
+`.sidebar-item`, `.bg-surface`, `.bg-user-message`,
+`.bg-composer-primary`, `.ProseMirror[role="textbox"]`, a `form`,
+and `.chatgpt-code-scrollport` with `pre` / `code`. Some code block
+containers were gray (`rgb(48, 48, 48)`); user messages had a distinct purple
+background. The captured computed backgrounds were from the sampled page state
+and do **not** establish that the DMS stylesheet was absent.
+
+The generated CSS now styles these surfaces using only stable selectors and
+DMS palette variables. No chat text, URLs, DOM IDs, export JSONs or generated
+CSS-module hashes are stored. Live verification remains outstanding:
+composer contrast/clickability, sidebar hover, user-message contrast,
+code block readability/copy actions, light/dark themes and wider viewport.

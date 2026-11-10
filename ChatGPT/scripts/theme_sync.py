@@ -128,6 +128,41 @@ def render_css(palette, mode="dark"):
     color: var(--dms-onSurface) !important;
     caret-color: var(--dms-primary) !important;
   }}
+  /* Authenticated DOM diagnostics, 2026-11-10, two narrow chat views.
+     Only semantic classes/roles are used, never hashed IDs or generated CSS
+     module suffixes. Do not change layout, visibility or input interaction. */
+  html.chatgpt-theme aside.app-shell-left-panel {{
+    background-color: var(--dms-surface) !important;
+  }}
+  html.chatgpt-theme aside .sidebar-item {{
+    border-radius: 12px !important;
+  }}
+  html.chatgpt-theme aside .sidebar-item:hover,
+  html.chatgpt-theme aside .sidebar-item.bg-secondary-ghost-hover {{
+    background-color: color-mix(in srgb, var(--dms-primary) 14%, var(--dms-surface)) !important;
+  }}
+  html.chatgpt-theme .bg-surface {{
+    background-color: var(--dms-surface) !important;
+  }}
+  /* The composer is a form containing a ProseMirror textbox, not necessarily
+     the old mobile-only data-composer-wrap-inner element. */
+  html.chatgpt-theme form:has(.ProseMirror[role="textbox"]) {{
+    background-color: var(--dms-surface) !important;
+    border-radius: 24px !important;
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--dms-outline) 30%, transparent) !important;
+  }}
+  html.chatgpt-theme .bg-composer-primary {{
+    background-color: var(--dms-primary) !important;
+    color: var(--dms-onPrimary) !important;
+  }}
+  html.chatgpt-theme .bg-user-message {{
+    background-color: color-mix(in srgb, var(--dms-primary) 24%, var(--dms-surface)) !important;
+    color: var(--dms-onSurface) !important;
+    border-radius: 20px !important;
+  }}
+  html.chatgpt-theme main .chatgpt-code-scrollport {{
+    background-color: var(--dms-surface) !important;
+  }}
   #prompt-textarea, [data-testid="composer"] {{ border-radius: 20px !important; }}
   [data-message-author-role="user"] .rounded-3xl {{ border-radius: 20px !important; }}
   @media (max-width: 800px) {{

@@ -142,6 +142,26 @@ The strict single-window/positioning guarantee applies **only to isolated Zen
 on Niri**. `xdg-open` may reuse a tab; normal-profile windows can change titles,
 profiles or tabs. There is no privileged browser automation to resolve that.
 
+### Chat and composer surface styling (2026-11-10)
+
+Two user-supplied **sanitized CSS/DOM diagnostic exports** (451 px viewport)
+cover chat bubbles, a ProseMirror composer, sidebar entries, and several code
+blocks. The raw exports are **not stored in this repository**.
+
+The theme maps these semantic selectors to DMS colors:
+`aside.app-shell-left-panel`, `.sidebar-item`, `.bg-surface`,
+`form:has(.ProseMirror[role="textbox"])`, `.bg-composer-primary`,
+`.bg-user-message` and `.chatgpt-code-scrollport`. User-message and
+hover colors are blended from the active DMS palette, never hard-coded to
+one wallpaper. Only colors, subtle outlines and corner radii change.
+The code-block header and dialogs may still use site-specific colors:
+the exports did not establish stable selectors for every surface.
+
+These rules require browser verification after a **full isolated Zen profile
+restart**. Do not claim complete visual coverage of login dialogs, upload
+menus, tables or all viewport widths from these two samples. Disabling
+"DMS-Farben übernehmen" remains the rollback.
+
 ## Material 3 theme
 
 The widget reads the **active rendered `Theme` singleton**: background, surface,
