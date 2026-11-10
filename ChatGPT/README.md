@@ -4,10 +4,14 @@ Native DankBar launcher for **https://chatgpt.com/** using your existing ChatGPT
 subscription. No OpenAI API, API key or additional API charges. This is a real
 browser window, **not an embedded WebView**.
 
-**Verification status:** offline regression, syntax, upstream API-contract,
-manifest-schema and CSS-parser checks passed on tiny02. No DMS/Zen/Niri graphical
-session is available there. Login, visual appearance and desktop integration
-are **not yet verified on CachyOS**. See [TESTING.md](TESTING.md).
+**Verification status (2026-11-10):** the guided desktop smoke test passed
+according to the CachyOS/Niri user, including Zen launch/focus, native DMS
+widget/Settings, login/session persistence and Material theme. After PR #5
+was squash-merged into `master`, installation through the custom DMS registry
+was also user-confirmed functional. Earlier offline regression, syntax,
+API-contract, manifest-schema and CSS-parser checks passed on tiny02.
+No automated GitHub CI is configured; extended edge cases in
+[TESTING.md](TESTING.md) should not be interpreted as fully verified.
 
 ## Features and architecture
 
@@ -39,42 +43,32 @@ Flatpak/Snap browser wrappers are not supported for isolated mode: sandboxed
 profile paths and process IDs differ. Regular/system-browser mode is the fallback.
 `xdg-open` is needed only for system-browser mode; Bash only for the legacy wrapper.
 
-## Try PR #5 now: one desktop command
+## Install from the DMS registry (recommended)
 
-Run in a terminal **inside your CachyOS/Niri desktop session**. Requires Git and
-Python 3. This deliberately checks out the feature branch; it does not deploy
-anything on tiny02 or merge the PR.
-
-```sh
-git clone --single-branch --branch feat/chatgpt-dms-widget https://github.com/almighty-atlas/dms-plugins.git "$HOME/dms-plugins-chatgpt" && python3 "$HOME/dms-plugins-chatgpt/ChatGPT/tests/desktop_smoke.py" --install
-```
-
-Keep that checkout: the installer links it into
-`${XDG_CONFIG_HOME:-~/.config}/dms/plugins/chatgptWeb`. It refuses to overwrite
-another installation. If the checkout already exists, run its smoke script
-directly after updating it on the feature branch.
-
-The script runs automated checks, opens/focuses ChatGPT, and guides you through
-the unavoidable visual/login checks. It asks you to enable the plugin and add
-the widget in DMS. It never asks for passwords or chat content. Output is
-`PASS` / `FAIL` / `SKIP`; exit codes are **0 all passed, 1 failure, 2 incomplete**.
-Diagnostics: `${XDG_STATE_HOME:-~/.local/state}/dms-chatgpt/desktop-smoke.json`
-(0600, results and version numbers only). Non-interactive mode marks manual
-checks `SKIP`; it does **not** fake a graphical pass.
-
-### Registry release installation (after merge, not yet tested end-to-end)
+The released plugin is available from this repository's `master` branch
+under registry ID `chatgptWeb`. Add the registry **once**, then install:
 
 ```sh
 dms registry add atlas https://github.com/almighty-atlas/dms-plugins
 dms plugins install chatgptWeb
 ```
 
-Add the registry only once. In **Settings → Plugins**, enable **ChatGPT Web**;
-add `chatgptWeb` to the desired horizontal or vertical DankBar on each screen.
-The registry entry's `repo`, `path: ChatGPT`, ID, name and dependencies match
-the manifest and upstream monorepo installer. DMS clones the repository's
-**default branch**; it cannot publish this unmerged feature branch by ID.
-No fabricated screenshot or unsupported registry branch property is supplied.
+In **Settings → Plugins**, enable **ChatGPT Web** and add `chatgptWeb`
+to your horizontal or vertical DankBar. DMS manages its own checkout under
+`${XDG_CONFIG_HOME:-~/.config}/dms/plugins/.repos/`; there is no need
+to keep an old feature-branch clone.
+
+**Confirmed:** after merge of PR #5 on 2026-11-10, the user installed via
+this registry and reported the same working UI and session behavior as
+the development installation. This was not a separate automated clean-machine
+test.
+
+For developers, clone `master` and use `ChatGPT/tests/desktop_smoke.py`
+inside a real CachyOS/Niri desktop session. The script guides real
+visual/login checks and records PASS/FAIL/SKIP in the private local
+diagnostic file
+`${XDG_STATE_HOME:-~/.local/state}/dms-chatgpt/desktop-smoke.json`
+without recording chat contents or credentials.
 
 For current Dux upstream:
 
@@ -287,8 +281,11 @@ profile marker, advisory lock and best-effort fallback window identity. The
 browser profile itself contains Zen-managed sensitive login data; protect your
 local account and backups normally. No automatic profile deletion is offered.
 
-Known limitations: desktop acceptance pending; theme reload requires profile
-restart; upstream DOM/API changes; no verified Zen app mode; fallback focus is
-best effort; Wayland app-ID can be ignored; Qt/qmllint runtime not available on
-tiny02; registry release install requires merge by the user. No automatic merge.
-WebView is a separate gated plan: [WEBVIEW.md](WEBVIEW.md), not production code.
+Known limitations: theme changes require isolated-profile browser restart;
+upstream ChatGPT DOM/API changes may affect styling; no verified Zen app mode;
+fallback focus is best effort when the Wayland app-ID is ignored; Qt/qmllint
+runtime is unavailable on tiny02; no automated GitHub CI currently runs.
+The browser-based v0.1 implementation has been user-tested on CachyOS and via
+the registry. Light-theme, all viewport widths, error dialogs, and all extended
+edge cases have not been exhaustively verified. WebView remains a gated future
+plan: [WEBVIEW.md](WEBVIEW.md), not production code.
