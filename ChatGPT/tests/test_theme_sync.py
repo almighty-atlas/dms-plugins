@@ -103,6 +103,19 @@ class ThemeTests(unittest.TestCase):
                 self.assertNotIn(volatile, css)
             self.assertIn("color-mix(in srgb, var(--dms-primary)", css)
 
+    def test_code_block_shell_and_header_use_dms_surface(self):
+        # Authenticated DOM capture: code shells had rgb(48, 48, 48)
+        # and contained .chatgpt-code-scrollport; headers were direct
+        # children with stable utility classes. Avoid generated CSS hashes.
+        for colors, mode in ((theme.DEFAULTS, "dark"), (theme.LIGHT, "light")):
+            css = theme.render_css(colors, mode)
+            outer = "html.chatgpt-theme main .border-subtle.contain-inline-size:has(.chatgpt-code-scrollport)"
+            self.assertIn(outer + " {", css)
+            self.assertIn(outer + " > .flex.items-center.font-sans.select-none {", css)
+            self.assertIn("background-color: var(--dms-surfaceContainer) !important;", css)
+            self.assertNotIn("ActionBar-KWWAct", css)
+            self.assertNotIn("Root-iW7ipz", css)
+
     def test_idempotent_sync_and_reversible_settings(self):
         theme.sync()
         profile = theme.profile_path()

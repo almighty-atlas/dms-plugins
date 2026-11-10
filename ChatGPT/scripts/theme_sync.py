@@ -160,6 +160,18 @@ def render_css(palette, mode="dark"):
     color: var(--dms-onSurface) !important;
     border-radius: 20px !important;
   }}
+  /* Authenticated code panes: the .border-subtle.contain-inline-size shell
+     around a semantic code scrollport still paints rgb(48,48,48). Use only
+     durable utility classes, not generated CodeBlock/Root/ActionBar hashes. */
+  html.chatgpt-theme main .border-subtle.contain-inline-size:has(.chatgpt-code-scrollport) {{
+    background-color: var(--dms-surface) !important;
+    border-color: color-mix(in srgb, var(--dms-outline) 28%, transparent) !important;
+    border-radius: 16px !important;
+  }}
+  html.chatgpt-theme main .border-subtle.contain-inline-size:has(.chatgpt-code-scrollport) > .flex.items-center.font-sans.select-none {{
+    background-color: var(--dms-surfaceContainer) !important;
+    color: var(--dms-onSurfaceVariant) !important;
+  }}
   html.chatgpt-theme main .chatgpt-code-scrollport {{
     background-color: var(--dms-surface) !important;
   }}

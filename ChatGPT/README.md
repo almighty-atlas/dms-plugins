@@ -154,8 +154,12 @@ The theme maps these semantic selectors to DMS colors:
 `.bg-user-message` and `.chatgpt-code-scrollport`. User-message and
 hover colors are blended from the active DMS palette, never hard-coded to
 one wallpaper. Only colors, subtle outlines and corner radii change.
-The code-block header and dialogs may still use site-specific colors:
-the exports did not establish stable selectors for every surface.
+For code blocks, the detected `.border-subtle.contain-inline-size`
+container must contain `.chatgpt-code-scrollport`, so other bordered
+UI elements remain untouched. Its directly nested header receives the DMS
+raised-surface color; the code pane uses the DMS surface color. No
+generated CSS class hashes are used. Dialogs may still use site-specific
+colors because the exports did not establish stable selectors for every surface.
 
 These rules require browser verification after a **full isolated Zen profile
 restart**. Do not claim complete visual coverage of login dialogs, upload
