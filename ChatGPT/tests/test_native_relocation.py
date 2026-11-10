@@ -23,6 +23,7 @@ class NativeRelocationTests(unittest.TestCase):
         self.assertIn('sha256sum "$portable_bin"', RUNNER)
         self.assertIn('original_hash" != "$portable_hash', RUNNER)
         self.assertIn('binary="$portable_bin"', RUNNER)
+        self.assertIn('cd -- "$portable_dir"', RUNNER)
         self.assertIn('ldd "$portable_bin"', RUNNER)
 
     def test_relocated_host_uses_same_isolated_dms_harness(self):
