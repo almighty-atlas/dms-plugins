@@ -1,5 +1,36 @@
 # ChatGPT Web · DMS / Dux Shell 2.0 · v0.1.0
 
+## Projektstatus: pausiert (10. November 2026)
+
+**Die Weiterentwicklung des ChatGPT-DMS-Widgets liegt auf Eis.**
+Es sind vorerst keine weiteren Implementierungen, Tests, Integrationsversuche,
+Dienstumstellungen oder Bereinigungen geplant. Der vorhandene Code und die
+Experimente bleiben zur Dokumentation erhalten. Dies ist **keine Aufforderung**,
+die bestehende v0.1-Installation zu deinstallieren oder zu verändern.
+
+**Verbindliche Anforderungen für eine mögliche Wiederaufnahme:**
+
+- Das **unveränderte, reguläre DMS und Quickshell** müssen weiterverwendet
+  werden. Kein Fork, kein gepatchtes Quickshell als DMS-Host und kein
+  systemd-Override zum Austauschen der laufenden Shell.
+- Gewünscht ist ein **optisch in DMS integriertes ChatGPT-Fenster**; ein
+  separates Fenster ist ausdrücklich akzeptabel und sogar bevorzugt.
+- Die Lösung soll das **bestehende ChatGPT-Konto und Abo** sowie die
+  **vorhandenen ChatGPT-Unterhaltungen** in der vertrauten Chat-Oberfläche
+  zugänglich machen, ohne gesonderte tokenbasierte API-Abrechnung.
+- Eine eigenständige Chat-App mit separater Chat-Historie, ein reiner
+  API-Client oder ein bloß umgestaltetes Browserfenster erfüllen diese
+  Anforderungen nicht. Die bisher untersuchten Alternativen wurden
+  deshalb nicht weiterverfolgt.
+- **Keine automatische Reaktivierung oder Systemänderung.** Fortsetzung
+  erst auf ausdrücklichen Wunsch; dann die technische Machbarkeit
+  anhand aktueller offizieller Schnittstellen erneut prüfen.
+
+Die bereits vorhandene browserbasierte **v0.1** ist ein separat
+dokumentierter, funktionierender Stand, aber **nicht** die gewünschte
+Ziellösung. Die WebView-/Quickshell-Experimente in [WEBVIEW.md](WEBVIEW.md)
+sind Forschungsstand und **nicht zur Aktivierung vorgesehen**.
+
 Native DankBar launcher for **https://chatgpt.com/** using your existing ChatGPT
 subscription. No OpenAI API, API key or additional API charges. This is a real
 browser window, **not an embedded WebView**.

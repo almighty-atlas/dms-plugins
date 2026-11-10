@@ -1,0 +1,66 @@
+"""Source-level contracts for a bounded, isolated DMS popup runtime test."""
+from pathlib import Path
+import unittest
+
+ROOT = Path(__file__).resolve().parents[1] / "experiments/native-popout"
+SCRIPT = (ROOT / "run_native_popout.sh").read_text()
+
+class NativeRuntimeIsolationTests(unittest.TestCase):
+    def test_pinned_private_host_and_source(self):
+        self.assertIn("set -euo pipefail", SCRIPT)
+        self.assertIn("umask 077", SCRIPT)
+        self.assertIn("/tmp/dms-chatgpt-native-v02", SCRIPT)
+        self.assertIn("/tmp/dms-chatgpt-qs-v02-argc1/build-dms/src/quickshell", SCRIPT)
+        self.assertIn("e46ccbc1d58930d6a189cd1c90b276db2d64bf42", SCRIPT)
+        self.assertIn("9b0f339b19057f4731bf3b48293307d7ef241671", SCRIPT)
+
+    def test_private_ipc_and_state(self):
+        self.assertIn("/usr/bin/env -i", SCRIPT)
+        self.assertIn("dbus-run-session --", SCRIPT)
+        self.assertIn('DMS_SOCKET=""', SCRIPT)
+        self.assertIn('NIRI_SOCKET=""', SCRIPT)
+        self.assertIn('GSETTINGS_BACKEND="memory"', SCRIPT)
+        self.assertIn('XDG_RUNTIME_DIR="$root/runtime"', SCRIPT)
+        self.assertIn('XDG_CONFIG_HOME="$profile_root/config"', SCRIPT)
+        self.assertIn('XDG_DATA_HOME="$profile_root/data"', SCRIPT)
+        self.assertIn('XDG_CACHE_HOME="$profile_root/cache"', SCRIPT)
+        self.assertIn('XDG_STATE_HOME="$profile_root/state"', SCRIPT)
+        self.assertIn('HOME="$profile_root/home"', SCRIPT)
+        self.assertIn('WAYLAND_DISPLAY="$socket"', SCRIPT)
+
+    def test_sandbox_flags_and_deadline(self):
+        self.assertIn("QTWEBENGINE_DISABLE_SANDBOX", SCRIPT)
+        self.assertIn("QTWEBENGINE_CHROMIUM_FLAGS", SCRIPT)
+        self.assertIn('[[ -S "$socket" ]]', SCRIPT)
+        self.assertIn('timeout --signal=TERM --kill-after=3s "$duration"', SCRIPT)
+        self.assertIn("duration=60s", SCRIPT)
+        for forbidden in ("sudo ", "pacman -S", "cmake --install",
+                          "dms restart", "dms plugins install", "systemctl ", "--no-sandbox"):
+            self.assertNotIn(forbidden, SCRIPT)
+
+    def test_fails_closed_without_pinned_dcommon_submodule(self):
+        self.assertIn("DMS_NATIVE_RUN_BLOCKED: DCommon submodule missing", SCRIPT)
+        self.assertIn("0877466a25b8e191a865bf75d0e500de6351ae04", SCRIPT)
+        self.assertIn('readlink "$qml_root/DCommon"', SCRIPT)
+        self.assertIn('"$qml_root/DCommon/Widgets"', SCRIPT)
+
+    def test_offline_default_and_explicit_public_site_only(self):
+        widget = (ROOT / "Widget.qml").read_text()
+        self.assertIn("loadHtml(", widget)
+        self.assertIn('onlineProbe: Quickshell.env("DMS_NATIVE_ONLINE_PROBE") === "1"', widget)
+        self.assertIn('if (root.onlineProbe)', widget)
+        self.assertIn('url = "https://chatgpt.com/";', widget)
+        self.assertEqual(widget.count("https://"), 1)
+        self.assertNotIn("http://", widget)
+        self.assertIn('if [[ "$#" == 0 ]]', SCRIPT)
+        self.assertIn('"--public-chatgpt"', SCRIPT)
+        self.assertIn('DMS_NATIVE_ONLINE_PROBE="$online"', SCRIPT)
+        self.assertIn('DMS_NATIVE_PERSISTENCE_PROBE="$persistent"', SCRIPT)
+        self.assertIn('DMS_NATIVE_AUTH_PROBE="$auth"', SCRIPT)
+        self.assertIn('DO NOT SIGN IN', SCRIPT)
+        self.assertIn('dbus-run-session --', SCRIPT)
+        self.assertIn('DMS_SOCKET=""', SCRIPT)
+        self.assertIn('NIRI_SOCKET=""', SCRIPT)
+
+if __name__ == "__main__":
+    unittest.main()

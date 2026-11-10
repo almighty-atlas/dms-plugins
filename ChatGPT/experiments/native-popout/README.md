@@ -1,0 +1,986 @@
+# Experimental native DMS ChatGPT WebEngine popout — offline only
+
+**Not a plugin release.** This directory intentionally has **no plugin.json**.
+Do not symlink, install or register it in the running DMS/ChatGPT v0.1.0.
+The stock installed Quickshell 0.3.2 has `argc=0`: creating a WebEngineView
+inside that process may abort the **entire desktop shell** (upstream issues
+[#1393](https://github.com/quickshell-mirror/quickshell/issues/1393) and
+[#1412](https://github.com/quickshell-mirror/quickshell/issues/1412)).
+
+## What is implemented
+
+- Uses real DMS `PluginComponent`, `PopoutComponent`, and the existing
+  `PluginPopout` and `PopoutManager` behind them; no independent surrogate
+  `PanelWindow` pretending to be the DMS popup.
+- Native pill opens a DMS popout on click. Hover cannot open/focus it.
+- Displays **offline** HTML with a simple input field and a fixed success
+  marker. No site requests, credentials, chat content, JS injection,
+  WebChannel or automatic downloads.
+- Creates a distinct disk-backed Qt WebEngine profile with the Qt 6.11
+  `WebEngineProfilePrototype` API **on the widget owner**, not inside
+  transient popout content. Only persistent cookies are stored; website
+  permission requests are denied. This profile is **not Zen's**.
+- The profile's default storage/cache paths resolve via Qt's
+  QStandardPaths; the future test runner must set separate
+  `XDG_DATA_HOME` and `XDG_CACHE_HOME`. **No login testing yet.**
+- One experimental widget instance only. The profile factory returns null
+  if the data directory is already used by another profile. A shared
+  singleton profile owner and multi-monitor lifecycle design are required
+  before production integration.
+
+## Source-only preparation — no shell launch
+
+Use the existing v0.2 feature branch:
+
+```sh
+python3 -m unittest discover -s ChatGPT/tests \
+  -p test_native_popout.py -q
+bash ChatGPT/experiments/native-popout/prepare_sandbox.sh
+```
+
+The script checks out a pinned DMS source revision
+`e46ccbc1d58930d6a189cd1c90b276db2d64bf42` into
+`/tmp/dms-chatgpt-native-v02/dux-shell`, then copies the candidate files
+into **that private source tree only**:
+
+- `quickshell/ChatGPTNativeProbe/Widget.qml`
+- `quickshell/ChatGPTNativeHarness.qml`
+
+This is necessary because the real DMS components resolve `qs.Common`,
+`qs.Services` and `qs.Modules.Plugins` relative to the QML configuration
+root. The harness uses a synthetic floating **test pill** but a **real**
+DMS `PluginComponent`/`PluginPopout` for its popup.
+
+The script does **not** launch Quickshell, DMS, or the browser. It does not
+register a plugin, touch `~/.config/dms`, restart any process, or install
+a package. Before running the harness, validate DMS's required Quickshell
+QML modules against the **separately patched** host: our previous reduced
+`build-layer` deliberately disabled I3, Hyprland, System Tray, etc., but
+DMS imports some of those modules. A suitably isolated and compatible host
+must be built first.
+
+## Future runtime gate (not yet performed)
+
+Run **only after** a distinct compatible patched host and isolated
+`HOME`, `XDG_CONFIG_HOME`, `XDG_DATA_HOME`, `XDG_CACHE_HOME`,
+`XDG_STATE_HOME` have been validated. Avoid starting an entire DMS
+session connected to the existing daemon. Test actual click-open,
+type `test`, Escape, click-outside dismissal, reopen, and whether the
+WebEngineView is destroyed on hide. Native WebEngine in the real DMS
+popout remains **unverified**.
+
+Do not enable online navigation/login until the popout focus, profile
+ownership, lifecycle and host compatibility gates pass.
+
+## Prepared DMS vs patched Quickshell import audit
+
+The private DMS source copy is now prepared on CachyOS
+(`DMS_NATIVE_SANDBOX_PREPARED` and 4/4 static regression tests).
+Before trying any QML runtime or changing build flags, run the purely
+**read-only** module audit:
+
+```sh
+python3 ChatGPT/experiments/native-popout/check_host_imports.py
+```
+
+It reads only the fixed `/tmp/dms-chatgpt-native-v02/dux-shell/quickshell`
+QML files and `/tmp/dms-chatgpt-qs-v02-argc1/build-layer/CMakeCache.txt`.
+It scans all DMS QML files (including dormant features), reports which
+`Quickshell.*` modules are disabled in the isolated build, and explicitly
+labels unmapped modules as unknown. No shell, DMS daemon, browser, website,
+or test popout is launched. A module-flag match **does not guarantee**
+runtime compatibility; it is only the next prerequisite check.
+
+Do not launch the experimental native harness until the missing modules,
+isolated XDG variables and DMS service side effects have been reviewed.
+
+## DMS-QML-kompatiblen Quickshell-Testbuild vorbereiten
+
+Der User-Audit (10.11.2026): vier Tests bestanden, **1.033 QML-Dateien**, zehn
+Modulgruppen im vorherigen Testbuild deaktiviert und keine unbekannten.
+
+```sh
+bash ChatGPT/experiments/native-popout/prepare_quickshell_dms.sh
+```
+
+Der neue `build-dms` wird separat unter `/tmp` konfiguriert. Das Skript
+verifiziert den gepinnten Upstream-Stand und exakt die eine `argc=1`-Änderung,
+prüft Polkit/PipeWire-Entwicklungsbibliotheken und aktiviert die zehn fehlenden
+QML-Modulgruppen. Fehlende Bibliotheken erscheinen als
+`DMS_HOST_DEPENDENCY_MISSING`. **Keine Installation, kein DMS-Start.**
+
+Wenn `DMS_HOST_CONFIGURED` erscheint, kann der neue Build anschließend
+mit `cmake --build /tmp/dms-chatgpt-qs-v02-argc1/build-dms -j2` kompiliert
+werden. Der native Popout-Harness darf bis zur Prüfung isolierter XDG-Pfade,
+QML-Module und DMS-Singleton-Nebenwirkungen **nicht** gestartet werden.
+
+## First real DMS PluginPopout runtime (offline, opt-in)
+
+The user confirmed the DMS-capable patched Quickshell build finished at
+`[1098/1098] Linking CXX executable src/quickshell`.
+
+The source review found that DMSService can connect to the live backend
+using `DMS_SOCKET`; SettingsData/Paths write under XDG paths; NiriService,
+Theme and other singleton initializers can trigger helper activity.
+`run_native_popout.sh` therefore launches a separate process with private
+HOME, XDG_CONFIG_HOME, XDG_DATA_HOME, XDG_CACHE_HOME, XDG_STATE_HOME,
+XDG_RUNTIME_DIR, private session DBus, in-memory GSettings, no
+DMS_SOCKET and no NIRI_SOCKET. The only intended shared session endpoint
+is the *absolute original Wayland compositor socket*, needed for
+on-screen display. This is **process state/IPC isolation**, not a
+kernel/filesystem sandbox.
+
+From the updated feature-branch checkout:
+
+```sh
+python3 -m unittest discover -s ChatGPT/tests -p test_native_runtime_isolation.py -q
+bash ChatGPT/experiments/native-popout/run_native_popout.sh
+```
+
+The test should show a small floating test pill. Click it to request
+the **real DMS PluginPopout**; check offline marker
+`DMS_NATIVE_POPOUT_HTML_LOADED` and the HTML input. Type `test`,
+dismiss by clicking outside, reopen, and test Escape. The command
+stops automatically after 60 seconds; a `timeout` exit status 124 is
+expected for an otherwise successful run.
+
+No website requests, ChatGPT login, credentials, production plugin edits
+or full DMS daemon/session launch. The experiment is unverified until
+the user's CachyOS runtime test.
+
+## First runtime failure: missing DCommon submodule (verified 2026-11-10)
+
+The first isolated Quickshell host launched and passed 4/4 static safety
+tests, but **QML configuration load failed before the popout could open**:
+`PluginComponent` -> `BasePill` -> `BarPill` ->
+`module "qs.DCommon.Widgets" is not installed`.
+Numerous Quickshell QML scanner warnings about missing `DCommon`
+imports were associated with the same missing submodule. Portal/DBus
+diagnostics are not the blocking error.
+
+Upstream pinned DMS superproject commit
+`e46ccbc1d58930d6a189cd1c90b276db2d64bf42`
+stores `quickshell/DCommon` as the symlink
+`../dux-qml-common/DCommon` and references `dux-qml-common`
+as a git submodule at the **pinned gitlink commit**
+`0877466a25b8e191a865bf75d0e500de6351ae04`.
+Our original shallow superproject clone had omitted this submodule.
+
+`prepare_sandbox.sh` now initializes that submodule **in the private
+checkout only**, verifies the gitlink revision and symlink resolution,
+and prints `DMS_COMMON_SHA`. The runtime runner fails immediately if
+the required submodule is missing or at an unexpected revision.
+No need to rebuild Quickshell: the failure is in copied QML content.
+After running the updated tests and preparer, rerun the same
+`run_native_popout.sh` trial. The result is not yet verified.
+
+## Real native rendering and text entry confirmed; lifecycle next
+
+The user supplied **three screenshots** and a full runtime log on
+2026-11-10: the isolated DMS source and DCommon submodule load;
+the actual DMS `PluginPopout` renders offline WebEngine HTML with marker
+`DMS_NATIVE_POPOUT_HTML_LOADED`; typing into the HTML input works.
+All **17/17** local tests passed. No production shell was replaced.
+
+The first screenshot shows an oversized external `FloatingWindow` test
+pill container. The experimental harness now explicitly sets
+`width: 420`, `height: 95` and widget 160×48; confirm the smaller
+geometry on Niri.
+
+New markers on the genuine DMS widget:
+`DMS_NATIVE_POPOUT_STATE OPEN/CLOSED` (visibility) and
+`DMS_NATIVE_WEBVIEW_CREATED/DESTROYED` (QML view lifetime).
+The browser **profile** is outside the popup; that does NOT alone
+preserve unsent text or running responses if the view is destroyed.
+
+Next test: click pill, type `draft123`, click outside, reopen and
+check draft preservation. Then test Escape. Compare markers to
+determine whether close/reopen recreates `WebEngineView`.
+No online navigation, account login or production plugin changes.
+
+## Lifecycle passed; public ChatGPT page optional (2026-11-10)
+
+After the 420×95 test-pill geometry and lifecycle tracing update, the
+user reported **all tests work**: opening, typing, click-outside
+dismissal, reopening, draft preservation and Escape. This is
+user-reported; no second terminal lifecycle log was provided, so
+we have **not** independently verified how many WebEngineView objects
+survive or are recreated. Do not infer that a chat response can
+continue while the popup is closed.
+
+The next gate loads the **public, signed-out ChatGPT homepage** in the
+**real** DMS `PluginPopout` with an explicit opt-in flag:
+
+```sh
+bash ChatGPT/experiments/native-popout/run_native_popout.sh --public-chatgpt
+```
+
+Default execution (without arguments) continues to load **only local
+offline HTML**. The opt-in mode forwards an explicit flag through
+the private `env -i` session; it uses a **separate off-the-record Qt
+WebEngine profile** (no `storageName`, so cookies/cache are in memory)
+and does not reuse the offline persistent test profile or Zen cookies.
+Only `https://chatgpt.com/` is directly requested by the experiment
+(the website itself can request associated resources and redirects).
+
+**Do not sign in, send messages, upload files or grant permissions in
+this test.** Page-load success does not guarantee usable website content;
+inspect the screenshot for any Cloudflare challenges and visible rendering.
+The runner remains bounded to 60 seconds and isolated from the live
+DMS backend; it is not a kernel sandbox. The Qt WebEngine
+Chromium sandbox remains enabled. Experimental production activation
+is still blocked.
+
+## Native public-site consent persistence gate (not yet tested)
+
+A 2026-11-10 screenshot confirms the signed-out ChatGPT page renders
+in the genuine DMS PluginPopout, including its cookie modal. Before
+authentication, test whether a non-sensitive consent choice survives
+a process restart with an **explicitly named, disk-backed profile**:
+
+```sh
+bash ChatGPT/experiments/native-popout/run_native_popout.sh --persistent-chatgpt
+```
+
+This new third profile, `dms-chatgpt-consent-probe-v01`, uses
+`AllowPersistentCookies` and is separate from both the offline profile
+and the public off-the-record `--public-chatgpt` profile. Qt's profile
+data is written only beneath the isolated runner's private XDG data and
+cache paths in `/tmp/dms-chatgpt-native-v02`. The files may remain on
+the test machine after the process exits and are not automatically
+deleted. The directory is **temporary**, not a production login path.
+
+In this opt-in mode, select **Reject non-essential** on the public site,
+let the test end, then launch **the same mode again** and check whether
+the dialog remains dismissed. This is a consent persistence probe, not
+proof of session authentication: some sites can store consent with
+different mechanisms. **Do not sign in, send prompts, upload files or
+grant permissions.** Run only one instance at a time.
+
+## Consent persistence confirmed; separate opt-in authentication test (2026-11-10)
+
+The user confirmed that the cookie dialog remained dismissed after the
+second launch of `--persistent-chatgpt`. This shows that the tested
+preference persisted across a **full Quickshell process restart**.
+It does **not** demonstrate authenticated-session persistence.
+
+A separate *fourth* named profile, `dms-chatgpt-auth-probe-v01`,
+can now be selected by the **explicit** `--auth-chatgpt` argument.
+It is distinct from all prior offline, anonymous public and cookie
+consent profiles. To avoid losing login sessions after `/tmp`
+cleanup, the runner stores this specific profile's private HOME/XDG
+data in the user-owned, mode-0700 directory
+`~/.local/share/dms-chatgpt-native-auth-probe/`. The runtime
+session still uses the isolated socket path, private session D-Bus,
+unset DMS/Niri backends and the reviewed patched Quickshell binary.
+
+**Important:** This private directory can contain valid authentication
+tokens, cookies and other sensitive account data. Do not upload or share
+its contents, screenshots showing login details, OAuth callback URLs,
+or unredacted authentication logs. The assistant never needs credentials.
+
+Opt-in command, **only when you are ready to authenticate yourself**:
+
+```sh
+bash ChatGPT/experiments/native-popout/run_native_popout.sh --auth-chatgpt
+```
+
+The login mode lasts at most **300 seconds** per run, giving time for
+interactive authentication. The login provider may reject Qt WebEngine,
+open a new window that is not handled by this prototype or require a
+passkey mechanism not available in the isolated D-Bus environment.
+Do not weaken browser sandbox flags to work around such failures.
+
+If sign-in works, close the run and launch the *same* opt-in mode
+again. Verify whether the account remains signed in. This test is
+limited to the local prototype; it is neither a release endorsement
+nor evidence that an installed DMS plugin can run WebEngine using
+the system's still-unpatched argc=0 Quickshell.
+
+To end the experiment after testing, first close all test windows,
+then remove the dedicated auth-test directory **only if you no longer
+need its saved session**. Never delete the production DMS or Zen data
+as part of this cleanup.
+
+## Installed-host compatibility preflight (read-only by default)
+
+After the user confirmed ChatGPT reply continuation across a hidden
+**real DMS popup**, the remaining release blocker is the host:
+the system-installed Quickshell was earlier verified as `argc=0`;
+only the isolated, patched `build-dms` host was confirmed as
+`argc=1`. Upstream tracking: quickshell
+[#1393](https://github.com/quickshell-mirror/quickshell/issues/1393)
+and [#1412](https://github.com/quickshell-mirror/quickshell/issues/1412).
+
+The non-destructive host preflight compares package IDs and executable
+hashes without starting a shell:
+
+```sh
+bash ChatGPT/experiments/native-popout/host_preflight.sh
+```
+
+To safely **re-test** the real argc behavior of each host, use the
+explicit `--probe` argument. It launches the already-reviewed,
+WebEngine-free `QuickshellArgsProbe.qml` under an independent
+6-second timeout for each binary and prints **only** the marker
+`ZERO_UNSAFE_FOR_WEBENGINE`, `NONZERO_WEBENGINE_PREREQUISITE_MET`
+or `INCONCLUSIVE`:
+
+```sh
+bash ChatGPT/experiments/native-popout/host_preflight.sh --probe
+```
+
+Neither mode modifies DMS/Quickshell packages, installed plugins,
+session profiles, the DMS daemon or the running desktop session.
+The explicit probe briefly launches a separate Quickshell process,
+never a WebEngineView. A nonzero argc is **necessary but insufficient**
+for native embedding; QML modules and compatibility must also pass.
+Do not enable a production native widget on an unpatched host.
+
+## Built-frontend relocation gate, offline and without systemd changes
+
+The user's live DMS diagnostics confirm:
+- `/proc/1363/exe` resolves to stock `/usr/bin/quickshell`.
+- The DMS backend's PATH begins with `/usr/local/sbin:/usr/local/bin:/usr/bin`.
+- `ldd` on the patched `build-dms/src/quickshell` reports **no missing
+  linked shared libraries**.
+- ELF `RUNPATH` printed as `[::::::::::::::::::::::]`: effectively
+  empty path elements, with no explicit `/tmp` build directory listed.
+  This alone does **not** establish relocation of the Qt QML plugins.
+
+The existing `run_native_popout.sh` now has an explicit
+`--relocation-check` offline-only mode. It copies **only** the private
+patched test executable to a **different private path** at
+`/tmp/dms-chatgpt-native-v02/portable-host/quickshell`, verifies a
+matching SHA256 hash, checks for missing linked libraries and then
+executes the genuine DMS PluginPopout **with local HTML only** and the
+same isolated HOME/XDG/D-Bus runtime.
+
+```sh
+bash ChatGPT/experiments/native-popout/run_native_popout.sh --relocation-check
+```
+
+Check that the DMS test pill appears, the popup opens and text is
+accepted. A successful test proves basic runtime relocation to that
+second path *in the current environment*, **not** that the binary
+is safe to install system-wide or remains compatible after Qt/
+Quickshell updates. On QML import errors, review the missing modules
+before packaging: Quickshell's CMake output used
+`QT_QML_OUTPUT_DIRECTORY` under the build tree, and the earlier
+build issued a warning that `INSTALL_QMLDIR` and
+`INSTALL_QML_PREFIX` were unset. No module relocation was assumed.
+
+The test does not change `/usr/bin/qs`, `/usr/bin/quickshell`,
+`dms.service`, PATH, Niri settings, package files or the production
+ChatGPT plugin. The private authenticated profile is **not selected**
+by this test, and no account data are copied. The test has not been
+executed on the user's machine yet.
+
+## Versioned private Quickshell staging, with RUNPATH sanitization
+
+The user confirmed that the pinned patched host still opens the **real**
+offline DMS PluginPopout after copying from its build directory to a
+different path under `/tmp` (`--relocation-check`). This supports,
+but does not by itself prove, user-directory installation portability.
+
+New *explicit* staging script:
+
+```sh
+bash ChatGPT/experiments/native-popout/stage_private_host.sh --stage
+```
+
+It requires the tested build binary (exact SHA256
+`63e258a5b089565b9a93feca02bce7d5dc6602e719d2c66997356643601290f4`)
+and pinned source commit. It installs **only a copy** into the
+user-owned version directory:
+
+```text
+~/.local/share/dms-chatgpt-native-host/9b0f339-argc1-v01/
+├── host/quickshell
+└── bin/qs
+```
+
+The source binary has a colon-only `RUNPATH`; the script demands
+`patchelf`, removes the `RUNPATH` on the **new copy only**, confirms
+no RPATH/RUNPATH dynamic entry remains using `readelf`, and checks
+`ldd` for missing libraries. Directories are user-owned mode 0700;
+the script refuses symlinked/unowned files or a divergent existing
+same-version host. The shim delegates `qs` arguments via `exec` to
+the adjacent private host. No general PATH, systemd, stock binary,
+DMS config or plugin is changed.
+
+**Next isolated offline runtime check, after staging:**
+
+```sh
+bash ChatGPT/experiments/native-popout/run_native_popout.sh --staged-host-check
+```
+
+This launches the real DMS Popup, **offline local HTML only**, through
+the staged `bin/qs` shim under the previously isolated XDG/DBus
+test instance. Check the pill, click open and type into the test
+field. The persisted ChatGPT auth profile is not touched.
+
+If `patchelf` is unavailable, staging stops with a clear
+`DMS_PRIVATE_HOST_BLOCKED` message; it does not install packages.
+This staged private copy is still a prototype, **not yet selected
+by `dms.service`**. Full DMS plugin module compatibility and
+Qt version maintenance need separate review. Rollback for this
+staging-only step is simply not to enable the service override;
+do not delete or edit any live DMS or Zen profile. Do not stage
+a production override until explicit approval.
+
+## Service-scoped private host override preview, intentionally read-only
+
+On 2026-11-10 the user confirmed that the versioned, private
+`stage_private_host.sh --stage` host also works through
+`run_native_popout.sh --staged-host-check`: the true offline DMS
+PluginPopout opens and the input is usable. This is a user-reported
+runtime success, **not** a full production DMS host migration.
+
+A strictly **read-only** systemd preview script is now available:
+
+```sh
+bash ChatGPT/experiments/native-popout/preview_dms_override.sh --preview
+```
+
+It verifies the private binary and exact launcher, confirms the
+RPATH/RUNPATH was removed and linked libraries resolve, reads the
+actual active `dms.service` MainPID and PATH from `/proc`, and
+requires the previously observed system service path and *no*
+existing overrides. It prints a proposed one-file drop-in:
+
+```ini
+# Proposed only, do NOT apply directly:
+[Service]
+Environment="PATH=<private bin/qs dir>:<existing DMS PATH>"
+```
+
+The concrete absolute paths come from the user's own runtime,
+not an inferred systemd setting. `Environment=` does not expand
+`$PATH`; systemd will use the full explicit string. See
+systemd.exec(5) for the environment-setting semantics.
+
+**The preview writes nothing and does not call systemctl reload,
+restart, stop, kill, enable, or disable.** It also does not alter
+the ChatGPT WebEngine auth profile, the installed plugin or the
+stock Pacman files. The service-scoped PATH change, if separately
+approved later, will affect DMS and its child processes, not
+only Quickshell. A DMS restart can briefly interrupt the panel,
+the Bitwarden helper and other child processes.
+
+**Planned rollback (not executed or installed yet):** delete only
+the exact managed `50-chatgpt-private-qs.conf` drop-in created
+during the separately approved activation, run
+`systemctl --user daemon-reload`, restart `dms.service`,
+then verify `/proc/<new qs pid>/exe` resolves back to
+`/usr/bin/quickshell`. This must be possible from a TTY even
+if the graphical panel fails. Never delete third-party
+overrides, the Pacman package, or the saved auth profile.
+Before actual activation, explicit permission must be obtained.
+
+Even after a service host switch, **native ChatGPT is not
+automatically installed as a production plugin**: the released
+`ChatGPT/Widget.qml` is still Zen-based. A separate, gated
+native widget with safe Zen fallback will be needed.
+
+## Transactional candidate DMS-only host switch (prepared; NOT activated)
+
+The user's read-only preview succeeded on CachyOS:
+`4 tests OK`, `DMS_OVERRIDE_PREVIEW_CHECKS: PASSED`, active DMS
+MainPID 1254, and private cleaned host SHA256
+`af356f3885e51fa0f4a40697648cc97ca19e24342ca990c01a340d34092f696a`.
+The proposed drop-in destination was
+`~/.config/systemd/user/dms.service.d/50-chatgpt-private-qs.conf`.
+No service files or running processes were changed by that preview.
+
+A separate, **NOT YET EXECUTED**, script
+`manage_dms_override.sh` implements three explicit modes:
+
+1. `--activate`: rechecks the live service and exact preview output,
+   verifies the pinned private host, refuses a process launched from
+   the DMS service cgroup and demands an interactive TTY plus typing
+   `ACTIVATE`. Installs a checksum marker and a stable rollback
+   controller under `~/.local/share/dms-chatgpt-native-host/
+   9b0f339-argc1-v01/control/`. **Before changing the service** it
+   arms an independent systemd transient user timer,
+   `dms-chatgpt-native-autorevert.timer`, to revert after **10 minutes**.
+   Only then does it create its uniquely named drop-in, reload the
+   user systemd manager and restart `dms.service`.
+2. `--confirm`: after a **successful, user-verified** bar/plugin
+   startup, checks `dms.service` is active and that a direct child
+   really runs the versioned patched `host/quickshell`; only then
+   cancels the rollback timer. **The user must run this within 10
+   minutes** if they want to retain the candidate.
+3. `--rollback`: also runnable from a TTY if the graphical DMS shell
+   fails. Checks the saved drop-in checksum and removes **only**
+   `50-chatgpt-private-qs.conf`, reloads the user systemd manager,
+   restarts DMS with the original `/usr/bin/qs`, and clears the
+   transaction marker. It does **not** require the private host
+   binary to be available.
+
+To review its static/syntax safety tests (read-only):
+
+```sh
+python3 -m unittest discover -s ChatGPT/tests \
+  -p 'test_native_dms_override_manage.py' -q
+```
+
+**Activation is intentionally not recommended without explicit approval
+and a rollback plan.** It interrupts the user's DMS bar and service
+children, including the Bitwarden helper. Use a terminal outside
+`dms.service`; do not rely on the DMS UI for recovery.
+
+Once approved, the activation command would be:
+
+```sh
+bash ChatGPT/experiments/native-popout/manage_dms_override.sh --activate
+```
+
+If the panel disappears, use an already-open terminal or a Linux TTY
+(e.g. Ctrl+Alt+F3, log in) and run:
+
+```sh
+bash ~/.local/share/dms-chatgpt-native-host/9b0f339-argc1-v01/control/manage_dms_override.sh --rollback
+```
+
+An independent timer should also attempt this rollback automatically,
+but it is **not a guarantee** against a dead user systemd manager,
+a deleted controller, or filesystem corruption. For manual emergency
+repair only, remove **the exact managed drop-in file**, run
+`systemctl --user daemon-reload` then
+`systemctl --user restart dms.service`.
+
+If DMS is functional on the patched host, explicitly confirm via the
+persistent controller's `--confirm` mode. Without confirmation,
+automatic rollback is expected after 10 minutes; it causes a second
+DMS restart. **Do not run activation just to inspect settings.**
+The original Zen ChatGPT v0.1 plugin remains unchanged: changing the
+host alone does not enable native ChatGPT in the production widget.
+
+## Full DMS failure diagnosed: Screencopy disabled, new isolated build required (2026-11-10)
+
+The user provided the **failed service invocation** log after a manually
+successful rollback. The decisive error is
+`@Modals/DLauncherV2/TileItem.qml[71:13]: ScreencopyView is not a type`
+(with a cascading unavailable-Frame chain), followed by
+`shell readiness timed out: UI did not report readiness`.
+The user's exact installed old test-build CMake flags confirm
+`SCREENCOPY:BOOL=OFF` while `WAYLAND=ON` and
+`SCREENCOPY_ICC/WLR/HYPRLAND_TOPLEVEL=ON`. The parent flag being OFF
+prevents `ScreencopyView` from being compiled into
+`Quickshell.Wayland._Screencopy`.
+
+**The previously tested service-switch candidate is retired.**
+The branch's old `manage_dms_override.sh --activate` is now
+fail-closed; its `--confirm` and `--rollback` recovery paths are
+preserved. Note that an **earlier controller copy** under the user's
+versioned `control/` directory may still be the previous script,
+but MUST NOT be used to activate the retired host.
+The production rollback left `dms.service` active and
+`DropInPaths` empty.
+
+New, separate, *configure-only* command:
+
+```bash
+bash ChatGPT/experiments/native-popout/prepare_quickshell_dms_screencopy.sh
+```
+
+It uses the exact pinned, single-line argc=1-patched Quickshell source
+but configures a new build tree
+`/tmp/dms-chatgpt-qs-v02-argc1/build-dms-screencopy-v01`.
+It requires the GBM pkg-config library, Vulkan headers, and earlier
+DMS dependencies, turns ON both parent `SCREENCOPY` and
+`SCREENCOPY_ICC/WLR/HYPRLAND_TOPLEVEL` CMake flags, and retains
+all other options from the original DMS-oriented build.
+It does not overwrite or reconfigure `build-dms`; no
+production/DMS/systemd/Pacman modifications are performed.
+
+Build only this new tree, after successful configuration:
+
+```bash
+cmake --build /tmp/dms-chatgpt-qs-v02-argc1/build-dms-screencopy-v01 -j2
+```
+
+Then run the new **offline-only, isolated** type-instantiation
+runtime probe. It creates an inert `ScreencopyView` with
+`captureSource: null` and `live: false`, rather than capturing
+a real screen or launching the entire running DMS service:
+
+```bash
+bash ChatGPT/experiments/native-popout/verify_quickshell_screencopy.sh --offline-probe
+```
+
+Expected marker: `DMS_SCREENCOPY_QML_READY: YES`.
+This proves only that the required type can be loaded and instantiated;
+it is **not** a full DMS UI readiness, production WebEngine,
+monitor, capture, or plugin compatibility test.
+
+The previous staged host SHA256 and `stage_private_host.sh` are
+intentionally **not** updated to the new executable yet: the new
+build's checksum and its behavior must be validated first, before
+considering a *new* versioned stage and a separate live deployment
+plan. Do not run any existing `--activate`.
+
+## Full DMS ShellCore QML type-tree check, without spawning a second desktop
+
+The user confirmed the separate `build-dms-screencopy-v01` host compiled,
+and `verify_quickshell_screencopy.sh --offline-probe` emitted
+`DMS_SCREENCOPY_QML_READY: YES`. `vulkan-headers` was already installed
+in pacman at version `1:1.4.363.0-1`; no package upgrade was required.
+
+The next prerequisite is loading the **actual DMS QML dependency chain**
+which previously failed at `Modals/DLauncherV2/TileItem.qml`.
+A new test is provided, against the pinned DMS checkout and its DCommon
+git submodule:
+
+```sh
+python3 -m unittest discover -s ChatGPT/tests \
+  -p 'test_native_dms_shellcore_type_tree.py' -q
+bash ChatGPT/experiments/native-popout/verify_dms_shellcore_type_tree.sh --offline-probe
+```
+
+The runner copies its disposable QML fixture into the private DMS
+checkout (same QML import root as production), runs the new
+Screencopy-enabled Quickshell with an independent private XDG home,
+runtime directory and D-Bus bus, and clears `DMS_SOCKET`/
+`NIRI_SOCKET`. The probe calls `Qt.createComponent` for
+`ShellCore.qml` and requires the resulting component to have
+`Component.Ready`. It **never calls createObject on ShellCore**:
+no DMS panel, startup backend, plugin UI or screen capture is started.
+The temporary fixture and XDG data are removed on exit.
+
+Expected markers:
+```text
+DMS_SHELLCORE_QML_TYPE_TREE_READY: YES
+DMS_SHELLCORE_ONLY_COMPILED_NOT_INSTANTIATED
+DMS_SHELLCORE_NO_LIVE_DMS_CHANGES
+```
+
+If the type chain cannot compile, the runner displays bounded
+error lines to identify the next missing QML type/module; inspect
+any output before sharing to avoid sensitive paths or tokens.
+
+Passing this check is **still not proof** that the entire DMS shell can
+start or report readiness with the new host; it intentionally skips
+instantiation, DMS IPC, Niri plugin state and live services. A full
+readiness gate, separate safe test of WebEngine on the new host, and
+new versioned staging remain prerequisites. The old
+`manage_dms_override.sh --activate` remains disabled, as does all
+production native ChatGPT activation.
+
+## Full DMS shell.qml entrypoint QML type tree gate (read-only isolated, next)
+
+The user completed the real `ShellCore.qml` source-type gate using the
+new `build-dms-screencopy-v01` binary:
+
+```text
+Ran 5 tests ... OK
+DMS_SHELLCORE_QML_TYPE_TREE_READY: YES
+DMS_SHELLCORE_SOURCE_PINNED: YES
+DMS_SHELLCORE_ONLY_COMPILED_NOT_INSTANTIATED
+DMS_SHELLCORE_ISOLATED_XDG_AND_DBUS
+DMS_SHELLCORE_NO_LIVE_DMS_CHANGES
+```
+
+The existing `verify_dms_shellcore_type_tree.sh` now accepts a
+second, explicit, isolated `--entry-probe` mode. It checks **the real
+top-level `shell.qml` QML type tree** by resolving that component with
+`Qt.createComponent(..., Component.PreferSynchronous)` in a
+fresh, private-XDG/DBus Quickshell process. This fixture *does not*
+instantiate `shell.qml`: no DMS bar, lock screen, wallpaper or
+second DMS backend is started. The existing `--offline-probe`
+ShellCore-only mode remains unchanged. The new fixture is
+`DmsShellEntrypointLoadProbe.qml`, still copied as a disposable file
+only into the pinned private DMS checkout.
+
+```sh
+python3 -m unittest discover -s ChatGPT/tests \
+  -p 'test_native_dms_*type_tree.py' -q
+bash ChatGPT/experiments/native-popout/verify_dms_shellcore_type_tree.sh --entry-probe
+```
+
+Expected: `DMS_SHELL_ENTRY_QML_TYPE_TREE_READY: YES`.
+
+**Not yet tested on CachyOS.** A success confirms the entrypoint's
+QML types *can be resolved*, not that DMS has reported readiness,
+opened its bar, communicated with the real backend or maintained
+its plugins. A full isolated startup/reliability test remains
+necessary before any new service switch. The retired
+`SCREENCOPY=OFF` host must never be reactivated.
+
+## New Screencopy host + genuine native DMS popout smoke (offline only)
+
+The user passed the `--entry-probe` against the actual DMS
+`shell.qml` component graph:
+
+```text
+Ran 9 tests ... OK
+DMS_SHELL_ENTRY_QML_TYPE_TREE_READY: YES
+DMS_SHELLCORE_SOURCE_PINNED: YES
+DMS_SHELLCORE_ONLY_COMPILED_NOT_INSTANTIATED
+DMS_SHELLCORE_ISOLATED_XDG_AND_DBUS
+DMS_SHELLCORE_NO_LIVE_DMS_CHANGES
+```
+
+This establishes type-resolution on the pinned DMS source with the
+Screencopy-capable host; **it does not instantiate the full DMS shell
+or prove its runtime readiness**.
+
+Before attempting full DMS runtime in a properly isolated compositor
+and daemon, re-run the already successful **real DMS PluginPopout
+WebEngine** interaction with the **new** Screencopy-enabled host.
+`run_native_popout.sh` gained an explicit mode:
+
+```sh
+python3 -m unittest discover -s ChatGPT/tests \
+  -p 'test_native_screencopy_popout.py' -q
+bash ChatGPT/experiments/native-popout/run_native_popout.sh \
+  --screencopy-host-check
+```
+
+This mode selects only
+`/tmp/dms-chatgpt-qs-v02-argc1/build-dms-screencopy-v01/src/quickshell`
+after checking all five Wayland/Screencopy CMake flags, ownership,
+execute permissions and linked libraries. It uses the already
+verified, actual `PluginPopout` DMS QML harness with offline
+`loadHtml`, a keyboard input, click-outside dismissal and Escape.
+No login is performed and no ChatGPT site is requested. The existing
+`--auth-chatgpt` and legacy modes keep the original test host and
+profile selection unchanged.
+
+The runner clears `DMS_SOCKET` and `NIRI_SOCKET`, uses separate
+XDG paths and a private D-Bus bus. Its only shared session endpoint
+is the Wayland compositor socket, so one temporary floating test
+window is visible. The 60-second timeout applies. The current user
+DMS service, system packages, existing ChatGPT plugin and saved
+authentication profile are not changed by the new mode.
+
+**Not yet tested on the user's host.** If this gate passes, it
+still does not substitute for a second, independently isolated
+full-DMS startup/readiness test. Old `SCREENCOPY=OFF` host
+activation remains permanently blocked.
+
+## Full DMS frontend runtime trial in a separate headless Niri (next)
+
+The user confirmed the *new* `SCREENCOPY=ON` Quickshell passed the
+actual native `PluginPopout` + offline QtWebEngine test
+(`run_native_popout.sh --screencopy-host-check`). The source-level
+entrypoint, ShellCore and Screencopy gates were already passed.
+
+A new bounded **full DMS frontend initialization probe** is available:
+
+```sh
+python3 -m unittest discover -s ChatGPT/tests \
+  -p 'test_native_headless_niri_full_ui.py' -q
+bash ChatGPT/experiments/native-popout/run_dms_headless_niri.sh --headless-probe
+```
+
+Unlike prior compile-only probes, this launches a **separate Niri
+headless compositor** and instantiates a temporary instrumented copy
+of the real pinned `shell.qml` in the corrected argc=1 Quickshell
+host. Instrumentation only adds log markers at entry creation and
+`dmsShellLoader.onLoaded`. It changes no tracked DMS QML sources.
+
+Niri runs with `NIRI_BACKEND=headless`, a minimal private
+`--config` path and **without `--session`**, which would otherwise
+import environment state into the real user systemd/DBus session.
+The test subprocesses have a different `XDG_RUNTIME_DIR`, their
+own Wayland and Niri IPC sockets, separate XDG config/data/cache,
+private session D-Bus and a deliberately unavailable system D-Bus
+address. The actual Niri `WAYLAND_DISPLAY` and `NIRI_SOCKET` are
+**not forwarded**. No connected DMS backend, real plugin state,
+session auth profile, `systemctl` restart or installed package is
+used. This is process/environment isolation, **not** a kernel-level
+security sandbox.
+
+The test waits for two markers:
+- `DMS_HEADLESS_ENTRY_INSTANTIATED: YES` (instrumented `shell.qml`)
+- `DMS_HEADLESS_DMSSHELL_LOADED: YES` (async `DMSShell.qml` loader)
+
+and rejects the original `ScreencopyView is not a type` /
+`Type ... unavailable` failure chain. The Quickshell process is
+bounded to 16 seconds with a 38-second outer watchdog; a trap
+stops the test Niri and deletes the temporary files.
+
+**Limitations:** DMS_SOCKET and NOTIFY_SOCKET are intentionally
+blank. `shell.ready` therefore cannot occur, so this checks actual
+frontend initialization *without* the DMS readiness handshake. No
+backend services/plugins or monitor restoration are verified.
+A successful headless test is not sufficient for a live service
+switch; new host staging and additional readiness testing remain.
+This test has not yet run on the user's CachyOS machine.
+
+On failure, the script prints selected log lines. It can fail due to
+headless Niri startup, GL/Wayland resource limits, or QML runtime
+behavior rather than the corrected Quickshell itself. Diagnose the
+reported failure before changing any live service. **Do not run
+the old `manage_dms_override.sh --activate`**, which remains
+blocked for the known broken host.
+
+## Correction after failed headless Niri startup (2026-11-10)
+
+The first full-DMS runtime trial failed **before Quickshell started**:
+
+```text
+Ran 6 tests ... OK
+DMS_HEADLESS_NIRI_START_FAILED: no private Wayland socket
+EventLoopCreation(... "neither WAYLAND_DISPLAY nor WAYLAND_SOCKET nor DISPLAY is set.")
+DMS_HEADLESS_PROBE_FAILED: inner process exited 1
+```
+
+This was **not** a DMS, QtWebEngine or Screencopy regression.
+The original runner attempted `NIRI_BACKEND=headless niri` without
+an existing Wayland display. Investigation of the *official* Niri
+v26.04 source (`src/main.rs`) confirmed that version does **not**
+select its headless backend from `NIRI_BACKEND`. Examples mentioning
+that variable refer to another branch/fork. Setting
+`WAYLAND_DISPLAY=""` did not create a compositor and Winit failed.
+
+**Replacement runtime topology:** a first, fully private **Weston
+headless** compositor (`weston --backend=headless --renderer=gl
+--no-config --shell=kiosk --socket=weston-dms-sandbox`) supplies
+a virtual display. A second, **nested** Niri v26.04 connects only
+to that Weston via its private `WAYLAND_DISPLAY`; the test
+Quickshell `shell.qml` connects only to nested Niri's own socket.
+No real Niri display, user shell, or DMS backend is reachable
+through forwarded IPC.
+
+The isolated launcher is still:
+```bash
+python3 -m unittest discover -s ChatGPT/tests \
+  -p 'test_native_headless_niri_full_ui.py' -q
+bash ChatGPT/experiments/native-popout/run_dms_headless_niri.sh --headless-probe
+```
+
+It now also requires an installed `weston` binary and fails
+closed if not available (`DMS_HEADLESS_BLOCKED: missing weston`).
+On Arch/CachyOS, the package is `weston` if the user elects to
+install it. No packages are installed by these scripts.
+The outer watchdog is now 52 seconds to allow both compositors
+to start; Niri and Weston are stopped by cleanup traps.
+
+**Not yet executed** on the user's desktop. Passing this
+test still proves only frontend instantiation and the
+`DMSShell.qml` loader status in an isolated session; it does
+not demonstrate `shell.ready` with a connected DMS backend,
+user plugin compatibility or production readiness.
+The prior `SCREENCOPY=OFF` host remains blocked.
+
+## Private mock-backend `shell.ready` handshake gate (prepared, pending)
+
+The user confirmed the **complete** headless Weston -> nested Niri ->
+corrected Quickshell frontend runtime gate passed all markers:
+`DMS_HEADLESS_ENTRY_INSTANTIATED: YES`,
+`DMS_HEADLESS_DMSSHELL_LOADED: YES`,
+`DMS_HEADLESS_FULL_UI_TYPE_ERRORS: NONE_DETECTED`,
+`DMS_HEADLESS_NO_LIVE_NIRI_OR_DMS_CHANGES`, and
+`DMS_HEADLESS_TEST_TERMINATED_AND_CLEANED`.
+This is successful real QML frontend initialization, with no
+live DMS backend involved.
+
+A follow-up isolates the actual `shell.ready` request path against
+a **mock** of the Go backend protocol. The pinned DMS `shell.qml`
+sends `shell.ready` only when its async shell loader is
+`Loader.Ready`, `DMSService.isConnected` is true, the backend advertises
+API v38 or newer, and `NOTIFY_SOCKET` is nonempty.
+`DMSService.qml` uses separate newline-delimited JSON request and
+subscription connections. The newly added Python
+`mock_dms_backend.py` serves **only a private AF_UNIX socket**
+under the temporary runtime path, sends a synthetic
+`service: server` subscription event with `apiVersion: 38`,
+and records receipt of a `shell.ready` request. It denies
+all other methods except a read-only `matugen.status` stub.
+It never connects to the live DMS daemon, real systemd notify
+or any TCP port and never accesses saved browser authentication.
+
+```bash
+python3 -m unittest discover -s ChatGPT/tests \
+  -p 'test_native_headless_mock_backend.py' -q
+bash ChatGPT/experiments/native-popout/run_dms_headless_niri.sh \
+  --mock-backend-probe
+```
+
+This reuses the private Weston/Niri compositor and pinned Quickshell
+candidate. Only the **Quickshell subprocess** receives
+`DMS_SOCKET` pointing to the synthetic socket and an inert
+`NOTIFY_SOCKET` path inside the isolated temp runtime. The user
+shell, real Niri, real DMS backend, systemd and installed plugins
+are untouched.
+
+Expected new markers:
+```text
+DMS_HEADLESS_MOCK_SHELL_READY_RECEIVED: YES
+DMS_HEADLESS_BACKEND_READY: MOCK_PROTOCOL_ONLY
+DMS_HEADLESS_TEST_TERMINATED_AND_CLEANED
+```
+
+The mock-protocol success proves that the patched host's complete
+DMS QML can emit the expected ready method in an isolated runtime.
+**It does not test the real Go backend's acceptance, API
+compatibility, startup orchestrator, stock user plugins, or full
+production readiness.** The old SCREENCOPY=OFF host activation
+remains retired; no live service change is authorized.
+
+## Mock shell.ready gate succeeded; stage only the corrected v02 private host (next)
+
+On 2026-11-10 the user supplied the entire successful
+`run_dms_headless_niri.sh --mock-backend-probe` output:
+
+```text
+Ran 5 tests ... OK
+DMS_HEADLESS_WESTON_PRIVATE_SOCKET_READY
+DMS_HEADLESS_NIRI_PRIVATE_SOCKET_READY
+DMS_HEADLESS_MOCK_PRIVATE_SOCKET_READY
+DMS_HEADLESS_ENTRY_INSTANTIATED: YES
+DMS_HEADLESS_DMSSHELL_LOADED: YES
+DMS_HEADLESS_FULL_UI_TYPE_ERRORS: NONE_DETECTED
+DMS_HEADLESS_MOCK_SHELL_READY_RECEIVED: YES
+DMS_HEADLESS_BACKEND_READY: MOCK_PROTOCOL_ONLY
+DMS_HEADLESS_NO_LIVE_NIRI_OR_DMS_CHANGES
+DMS_HEADLESS_TEST_TERMINATED_AND_CLEANED
+```
+
+Gtk portal warnings in the fully isolated private D-Bus environment
+were **not fatal** and are unrelated to the prior `ScreencopyView`
+failure. This proves the corrected host's complete DMS frontend can
+emit `shell.ready` to the **private AF_UNIX mock**, but **does not**
+establish interoperability with the live Go DMS service, login,
+all user plugins or real display layout.
+
+The old v01 staged host **remains retired and untouched**.
+Do not run its existing `--activate`, or reactivate the original
+persistent controller from the earlier failed test.
+
+Next, a new private *user-owned, separate v02* host can be staged
+without changing a single live service:
+
+```sh
+python3 -m unittest discover -s ChatGPT/tests \
+  -p 'test_native_screencopy_stage.py' -q
+bash ChatGPT/experiments/native-popout/stage_private_screencopy_host.sh --stage
+bash ChatGPT/experiments/native-popout/stage_private_screencopy_host.sh --verify
+bash ChatGPT/experiments/native-popout/run_native_popout.sh \
+  --screencopy-staged-host-check
+```
+
+The staging script verifies the pinned source, exact one-line argc
+patch, Screencopy CMake build flags, shared library dependencies and
+owner-controlled directories; copies only the **new** build
+`build-dms-screencopy-v01/src/quickshell` to
+`~/.local/share/dms-chatgpt-native-host/9b0f339-argc1-screencopy-v02/`.
+On that *copy*, it removes RPATH/RUNPATH, saves its new SHA256,
+creates the `bin/qs` private wrapper and refuses to overwrite an
+existing v02 directory. No sudo/systemd/Pacman, live dms, or user
+auth profile is touched.
+
+The new explicit `--screencopy-staged-host-check` verifies the
+manifest/hash/wrapper and runs the **genuine DMS PluginPopout** with
+local offline HTML and the *relocated v02 host*. The tested original
+non-staged and v01 runner modes remain unchanged. This test is
+interactive for at most 60 seconds. Success **still does not
+authorize the production service switch**; we must separately
+inspect v02's absolute runtime behavior and design an independent
+new controller with safe rollback and service readiness checks.
+
+Six static/Bash-syntax tests prepared in
+`test_native_screencopy_stage.py`. **Not executed on CachyOS yet**.
