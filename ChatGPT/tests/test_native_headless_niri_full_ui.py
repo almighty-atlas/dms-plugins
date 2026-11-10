@@ -35,6 +35,10 @@ class HeadlessNiriFullUiTests(unittest.TestCase):
         self.assertIn('XDG_RUNTIME_DIR="$private/runtime"', O)
         self.assertIn('NIRI_BACKEND:-', I)
         self.assertIn('DMS_HEADLESS_NIRI_NO_SESSION_IMPORT', I)
+        # Empty values are intentional: Bash's :- fallback would reject them.
+        for key in ("DMS_SOCKET", "NOTIFY_SOCKET", "NIRI_SOCKET"):
+            self.assertIn("${" + key + "-something}", I)
+            self.assertNotIn("${" + key + ":-something}", I)
         self.assertNotIn('niri --session', I)
         self.assertNotIn('niri-session', I)
 
