@@ -8,6 +8,7 @@ online=0
 persistent=0
 auth=0
 relocation=0
+staged=0
 duration=60s
 if [[ "$#" == 0 ]]; then
     : # default: local HTML only
@@ -22,8 +23,10 @@ elif [[ "$#" == 1 && "$1" == "--auth-chatgpt" ]]; then
     duration=300s
 elif [[ "$#" == 1 && "$1" == "--relocation-check" ]]; then
     relocation=1
+elif [[ "$#" == 1 && "$1" == "--staged-host-check" ]]; then
+    staged=1
 else
-    echo "Usage: run_native_popout.sh [--public-chatgpt|--persistent-chatgpt|--auth-chatgpt|--relocation-check]" >&2
+    echo "Usage: run_native_popout.sh [--public-chatgpt|--persistent-chatgpt|--auth-chatgpt|--relocation-check|--staged-host-check]" >&2
     exit 2
 fi
 
@@ -155,6 +158,42 @@ if [[ "$relocation" == 1 ]]; then
     echo "DMS_NATIVE_RELOCATION_STAGED: $portable_bin"
     echo "DMS_NATIVE_RELOCATION_SHA256_MATCH: YES"
     echo "DMS_NATIVE_RELOCATION_TEST: actual DMS PluginPopout, offline only"
+fi
+
+# Run the stable per-user copy via its private 'qs' wrapper.
+# This is an offline-only, isolated runtime test (NOT the running DMS).
+if [[ "$staged" == 1 ]]; then
+    if [[ -z "${HOME:-}" || "$HOME" != /* ]]; then
+        echo "DMS_NATIVE_STAGED_BLOCKED: missing absolute HOME" >&2
+        exit 1
+    fi
+    stage_root="$HOME/.local/share/dms-chatgpt-native-host/9b0f339-argc1-v01"
+    staged_host="$stage_root/host/quickshell"
+    staged_shim="$stage_root/bin/qs"
+    for file in "$stage_root" "$stage_root/host" "$stage_root/bin" \
+                "$staged_host" "$staged_shim"; do
+        if [[ -L "$file" || ! -e "$file" || ! -O "$file" ]]; then
+            echo "DMS_NATIVE_STAGED_BLOCKED: missing/untrusted staged host" >&2
+            exit 1
+        fi
+    done
+    if [[ ! -x "$staged_host" || ! -x "$staged_shim" ]]; then
+        echo "DMS_NATIVE_STAGED_BLOCKED: private host not executable" >&2
+        exit 1
+    fi
+    if readelf -d "$staged_host" | grep -Eq '\((RPATH|RUNPATH)\)'; then
+        echo "DMS_NATIVE_STAGED_BLOCKED: RPATH/RUNPATH remains" >&2
+        exit 1
+    fi
+    if ldd "$staged_host" | grep -Fq "not found"; then
+        echo "DMS_NATIVE_STAGED_BLOCKED: missing shared library" >&2
+        exit 1
+    fi
+    binary="$staged_shim"
+    cd -- "$stage_root/host"
+    echo "DMS_NATIVE_STAGED_HOST_TEST: $staged_host"
+    echo "DMS_NATIVE_STAGED_QS_WRAPPER_TEST: $staged_shim"
+    echo "DMS_NATIVE_STAGED_OFFLINE_ONLY"
 fi
 
 if [[ "$auth" == 1 ]]; then
