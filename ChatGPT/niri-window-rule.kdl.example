@@ -1,0 +1,13 @@
+// Optional; launcher also floats/sizes the initial window through Niri IPC.
+// Add this block yourself (or include a copy); never replace config.kdl.
+// Verify identity: niri msg pick-window -> app_id must be dms-chatgpt.
+// No title match: login and changed conversation titles keep the same identity.
+window-rule {
+    match app-id=r#"^dms-chatgpt$"#
+    open-floating true
+    default-column-width { fixed 760; }
+    default-window-height { fixed 860; }
+    default-floating-position x=24 y=72 relative-to="top-right"
+    geometry-corner-radius 20
+    clip-to-geometry true
+}

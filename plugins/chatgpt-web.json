@@ -1,0 +1,13 @@
+{
+  "id": "chatgptWeb",
+  "name": "ChatGPT Web",
+  "capabilities": ["dankbar-widget"],
+  "category": "utilities",
+  "repo": "https://github.com/almighty-atlas/dms-plugins",
+  "path": "ChatGPT",
+  "author": "almighty-atlas",
+  "description": "ChatGPT web app launcher for DMS with Zen profile and optional Material colors",
+  "dependencies": ["python3"],
+  "compositors": ["any"],
+  "distro": ["any"]
+}
