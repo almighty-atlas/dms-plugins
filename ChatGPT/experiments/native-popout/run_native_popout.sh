@@ -9,6 +9,7 @@ persistent=0
 auth=0
 relocation=0
 staged=0
+screencopy_host=0
 duration=60s
 if [[ "$#" == 0 ]]; then
     : # default: local HTML only
@@ -25,8 +26,10 @@ elif [[ "$#" == 1 && "$1" == "--relocation-check" ]]; then
     relocation=1
 elif [[ "$#" == 1 && "$1" == "--staged-host-check" ]]; then
     staged=1
+elif [[ "$#" == 1 && "$1" == "--screencopy-host-check" ]]; then
+    screencopy_host=1
 else
-    echo "Usage: run_native_popout.sh [--public-chatgpt|--persistent-chatgpt|--auth-chatgpt|--relocation-check|--staged-host-check]" >&2
+    echo "Usage: run_native_popout.sh [--public-chatgpt|--persistent-chatgpt|--auth-chatgpt|--relocation-check|--staged-host-check|--screencopy-host-check]" >&2
     exit 2
 fi
 
@@ -35,6 +38,36 @@ qml_root="$root/dux-shell/quickshell"
 harness="$qml_root/ChatGPTNativeHarness.qml"
 binary=/tmp/dms-chatgpt-qs-v02-argc1/build-dms/src/quickshell
 source_dir=/tmp/dms-chatgpt-qs-v02-argc1/source
+
+# The successful full-DMS Screencopy build is selected only by an
+# explicit offline-only mode. The original host and all login modes
+# retain their exact previous binaries and profiles.
+if [[ "$screencopy_host" == 1 ]]; then
+    screencopy_build=/tmp/dms-chatgpt-qs-v02-argc1/build-dms-screencopy-v01
+    binary="$screencopy_build/src/quickshell"
+    if [[ -L "$screencopy_build" || -L "$binary" ||
+          ! -d "$screencopy_build" || ! -O "$screencopy_build" ||
+          ! -f "$binary" || ! -O "$binary" || ! -x "$binary" ]]; then
+        echo "DMS_NATIVE_SCREENCOPY_HOST_BLOCKED: new build missing or untrusted" >&2
+        exit 1
+    fi
+    for flag in WAYLAND SCREENCOPY SCREENCOPY_ICC SCREENCOPY_WLR SCREENCOPY_HYPRLAND_TOPLEVEL; do
+        if ! grep -Eq "^$flag:BOOL=(ON|TRUE)$" "$screencopy_build/CMakeCache.txt"; then
+            echo "DMS_NATIVE_SCREENCOPY_HOST_BLOCKED: $flag not enabled" >&2
+            exit 1
+        fi
+    done
+    if ldd "$binary" | grep -Fq "not found"; then
+        echo "DMS_NATIVE_SCREENCOPY_HOST_BLOCKED: missing linked library" >&2
+        exit 1
+    fi
+    # The build-tree binary may contain empty RUNPATH entries. Do not
+    # execute it from an arbitrary, possibly untrusted working directory.
+    cd -- "$screencopy_build"
+    echo "DMS_NATIVE_SCREENCOPY_HOST: $binary"
+    echo "DMS_NATIVE_SCREENCOPY_HOST_OFFLINE_ONLY"
+    echo "DMS_NATIVE_SCREENCOPY_HOST_NO_SERVICE_CHANGE"
+fi
 
 if [[ -L "$root" || -L "$qml_root" || -L "$harness" ||
       ! -f "$harness" || ! -x "$binary" || ! -O "$root" ]] ||
