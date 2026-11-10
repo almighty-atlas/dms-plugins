@@ -11,6 +11,15 @@ if [[ "$#" != 1 || ( "$mode" != "--activate" &&
     echo "Usage: bash manage_dms_override.sh --activate|--confirm|--rollback" >&2
     exit 2
 fi
+# The previously user-tested private build was compiled with SCREENCOPY=OFF.
+# The complete DMS frontend failed to load ScreencopyView, so the old
+# activation path is retired. Keep confirm and rollback available for
+# recovery only. A new full build needs its own reviewed deployment path.
+if [[ "$mode" == "--activate" ]]; then
+    echo "DMS_SWITCH_BLOCKED: retired candidate was built with SCREENCOPY=OFF" >&2
+    echo "DMS_SWITCH_BLOCKED: rebuild and test full DMS-compatible Quickshell first" >&2
+    exit 1
+fi
 if [[ -z "${HOME:-}" || "$HOME" != /* ||
       ! "$HOME" =~ ^/[a-zA-Z0-9_./+-]+$ || ! -d "$HOME" || ! -O "$HOME" ]]; then
     echo "DMS_SWITCH_BLOCKED: unsafe HOME" >&2
