@@ -16,10 +16,10 @@ if [[ -L "$private" || -L "$fixture" || ! -d "$private" ||
       ! -f "$binary" || ! -O "$binary" || ! -x "$binary" ||
       "${NIRI_BACKEND:-}" != "headless" ||
       "${XDG_RUNTIME_DIR:-}" != "$private/runtime" ||
-      "${DMS_SOCKET:-something}" != "" ||
-      "${NOTIFY_SOCKET:-something}" != "" ||
+      "${DMS_SOCKET-something}" != "" ||
+      "${NOTIFY_SOCKET-something}" != "" ||
       "${WAYLAND_DISPLAY:-}" != "" ||
-      "${NIRI_SOCKET:-something}" != "" ]]; then
+      "${NIRI_SOCKET-something}" != "" ]]; then
     echo "DMS_HEADLESS_INNER_BLOCKED: unsafe environment or sources" >&2
     exit 1
 fi
