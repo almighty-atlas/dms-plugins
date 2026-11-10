@@ -13,10 +13,14 @@ ShellRoot {
         visible: true
         implicitWidth: 420
         implicitHeight: 95
+        width: 420
+        height: 95
         title: "DMS native ChatGPT popout experiment (isolated)"
         color: "#181825"
 
         Native.Widget {
+            width: 160
+            height: 48
             anchors.centerIn: parent
             pluginId: "chatgptNativeProbe"
             parentScreen: Quickshell.screens.length > 0 ? Quickshell.screens[0] : null

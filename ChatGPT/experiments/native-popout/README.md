@@ -173,3 +173,27 @@ the required submodule is missing or at an unexpected revision.
 No need to rebuild Quickshell: the failure is in copied QML content.
 After running the updated tests and preparer, rerun the same
 `run_native_popout.sh` trial. The result is not yet verified.
+
+## Real native rendering and text entry confirmed; lifecycle next
+
+The user supplied **three screenshots** and a full runtime log on
+2026-11-10: the isolated DMS source and DCommon submodule load;
+the actual DMS `PluginPopout` renders offline WebEngine HTML with marker
+`DMS_NATIVE_POPOUT_HTML_LOADED`; typing into the HTML input works.
+All **17/17** local tests passed. No production shell was replaced.
+
+The first screenshot shows an oversized external `FloatingWindow` test
+pill container. The experimental harness now explicitly sets
+`width: 420`, `height: 95` and widget 160×48; confirm the smaller
+geometry on Niri.
+
+New markers on the genuine DMS widget:
+`DMS_NATIVE_POPOUT_STATE OPEN/CLOSED` (visibility) and
+`DMS_NATIVE_WEBVIEW_CREATED/DESTROYED` (QML view lifetime).
+The browser **profile** is outside the popup; that does NOT alone
+preserve unsent text or running responses if the view is destroyed.
+
+Next test: click pill, type `draft123`, click outside, reopen and
+check draft preservation. Then test Escape. Compare markers to
+determine whether close/reopen recreates `WebEngineView`.
+No online navigation, account login or production plugin changes.

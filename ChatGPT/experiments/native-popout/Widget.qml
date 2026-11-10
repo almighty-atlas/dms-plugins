@@ -26,6 +26,10 @@ PluginComponent {
             console.warn("DMS_NATIVE_PROFILE_UNAVAILABLE");
     }
 
+    // Log real DMS visibility, separate from the lifetime of the webview.
+    onInteractionActiveChanged: console.log(
+        "DMS_NATIVE_POPOUT_STATE", interactionActive ? "OPEN" : "CLOSED")
+
     // Mouse hover must not create a browser or steal keyboard focus.
     function triggerHoverPopout() {}
 
@@ -84,7 +88,9 @@ PluginComponent {
                     sourceComponent: Component {
                         WebEngineView {
                             profile: root.webProfile
-                            Component.onCompleted: loadHtml(
+                            Component.onCompleted: {
+                                console.log("DMS_NATIVE_WEBVIEW_CREATED");
+                                loadHtml(
                                 "<!doctype html><html><meta charset='utf-8'>" +
                                 "<body style='background:#1e1e2e;color:#cdd6f4;" +
                                 "font:18px sans-serif;padding:24px'>" +
@@ -94,7 +100,9 @@ PluginComponent {
                                 "<input type='text' placeholder='Type test' " +
                                 "style='font:18px sans-serif;padding:12px;width:85%'>" +
                                 "</body></html>"
-                            )
+                                );
+                            }
+                            Component.onDestruction: console.log("DMS_NATIVE_WEBVIEW_DESTROYED")
                             onLoadingChanged: function(info) {
                                 if (info.status === WebEngineView.LoadSucceededStatus)
                                     console.log("DMS_NATIVE_POPOUT_HTML_LOADED")

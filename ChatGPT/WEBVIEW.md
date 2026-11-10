@@ -385,3 +385,18 @@ The source preparation cloned the superproject without initializing
 its submodule; the missing QML imports are consistent with that.
 Preparation now initializes/verifies the **private** submodule and
 runtime preflights its presence. No production changes; retest pending.
+
+## Offline WebEngine in real DMS PluginPopout CONFIRMED (2026-11-10)
+
+User-provided screenshots and terminal log show 17/17 static tests,
+successful source/DCommon QML startup, **real DMS PluginPopout**
+rendering local HTML with `DMS_NATIVE_POPOUT_HTML_LOADED` and
+successful entry of `asd` in the HTML input. This confirms native
+DMS popup rendering **and text-input focus**, but not close/reopen
+behavior or unsent-draft preservation.
+
+The oversized separate test-pill `FloatingWindow` now gets explicit
+420×95 size. Popup state and `WebEngineView` creation/destruction
+markers were added for the next runtime test. Profile continuity
+and DOM/page continuity must be measured separately. The experiment
+remains offline and outside the live DMS installation.

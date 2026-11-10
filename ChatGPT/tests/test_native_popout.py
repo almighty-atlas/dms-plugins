@@ -31,6 +31,17 @@ class NativeCandidateContracts(unittest.TestCase):
         self.assertNotIn("WebChannel", widget)
         self.assertNotIn("runJavaScript(", widget)
 
+    def test_popup_geometry_and_lifecycle_tracing(self):
+        shell = (ROOT / "ChatGPTNativeHarness.qml").read_text()
+        widget = (ROOT / "Widget.qml").read_text()
+        self.assertIn("width: 420", shell)
+        self.assertIn("height: 95", shell)
+        self.assertIn("width: 160", shell)
+        self.assertIn("DMS_NATIVE_POPOUT_STATE", widget)
+        self.assertIn("DMS_NATIVE_WEBVIEW_CREATED", widget)
+        self.assertIn("DMS_NATIVE_WEBVIEW_DESTROYED", widget)
+        self.assertIn("DMS_NATIVE_POPOUT_HTML_LOADED", widget)
+
     def test_test_harness_is_separate(self):
         shell = (ROOT / "ChatGPTNativeHarness.qml").read_text()
         self.assertIn("ShellRoot {", shell)
