@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Inner worker. ONLY run by run_dms_headless_niri.sh with an env -i private
-# XDG_RUNTIME_DIR and a new session D-Bus. Never use the live Wayland socket.
+# Inner worker: headless Weston -> nested Niri -> full DMS QML frontend.
+# ONLY run by run_dms_headless_niri.sh with env -i / private XDG/DBus.
+# The host desktop Wayland socket is NEVER forwarded.
 set -euo pipefail
 umask 077
 
@@ -14,7 +15,7 @@ fixture="$4"
 if [[ -L "$private" || -L "$fixture" || ! -d "$private" ||
       ! -O "$private" || ! -f "$fixture" || ! -O "$fixture" ||
       ! -f "$binary" || ! -O "$binary" || ! -x "$binary" ||
-      "${NIRI_BACKEND:-}" != "headless" ||
+      -n "${NIRI_BACKEND:-}" ||
       "${XDG_RUNTIME_DIR:-}" != "$private/runtime" ||
       "${DMS_SOCKET-something}" != "" ||
       "${NOTIFY_SOCKET-something}" != "" ||
@@ -23,26 +24,54 @@ if [[ -L "$private" || -L "$fixture" || ! -d "$private" ||
     echo "DMS_HEADLESS_INNER_BLOCKED: unsafe environment or sources" >&2
     exit 1
 fi
-if ! command -v niri >/dev/null 2>&1 || ! command -v timeout >/dev/null 2>&1; then
-    echo "DMS_HEADLESS_INNER_BLOCKED: niri/timeout missing" >&2
+if ! command -v niri >/dev/null 2>&1 || ! command -v weston >/dev/null 2>&1 || ! command -v timeout >/dev/null 2>&1; then
+    echo "DMS_HEADLESS_INNER_BLOCKED: niri/weston/timeout missing" >&2
     exit 1
 fi
 
+weston_pid=
 niri_pid=
 cleanup_inner() {
     if [[ -n "$niri_pid" ]]; then
         kill -TERM "$niri_pid" 2>/dev/null || true
         wait "$niri_pid" 2>/dev/null || true
     fi
+    if [[ -n "$weston_pid" ]]; then
+        kill -TERM "$weston_pid" 2>/dev/null || true
+        wait "$weston_pid" 2>/dev/null || true
+    fi
 }
 trap cleanup_inner EXIT
 
-# Not --session: that flag imports environment into the real user manager.
-# Headless backend uses private runtime sockets and no physical display.
-niri --config "$private/config/niri.kdl" > "$private/niri.log" 2>&1 &
+# Niri v26.04 does NOT support NIRI_BACKEND=headless, despite references
+# to that flag in unrelated branches/forks. It chooses Winit when a valid
+# parent Wayland display exists. Create that display in a fully private
+# headless Weston first; no physical KMS/TTY/real Niri is accessed.
+weston_name=weston-dms-sandbox
+weston_socket="$private/runtime/$weston_name"
+weston --backend=headless --renderer=gl --no-config --shell=kiosk \
+      --socket="$weston_name" --width=1280 --height=800 --idle-time=0 \
+      > "$private/weston.log" 2>&1 &
+weston_pid=$!
+for ((i=0; i<50; i++)); do
+    [[ -S "$weston_socket" ]] && break
+    if ! kill -0 "$weston_pid" 2>/dev/null; then break; fi
+    sleep 0.2
+done
+if [[ ! -S "$weston_socket" ]]; then
+    echo "DMS_HEADLESS_WESTON_START_FAILED: no private parent Wayland socket" >&2
+    grep -Ei 'error|fail|fatal|headless|backend|renderer' "$private/weston.log" | tail -n 25 || true
+    exit 1
+fi
+echo "DMS_HEADLESS_WESTON_PRIVATE_SOCKET_READY"
+
+# No --session: avoids importing state into the real session manager.
+# The only parent WAYLAND_DISPLAY is the just-created private Weston socket.
+WAYLAND_DISPLAY="$weston_name" niri --config "$private/config/niri.kdl" \
+      > "$private/niri.log" 2>&1 &
 niri_pid=$!
 socket=
-for ((i=0; i<65; i++)); do
+for ((i=0; i<60; i++)); do
     socket=$(find "$XDG_RUNTIME_DIR" -maxdepth 1 -type s -name 'wayland-*' -print -quit)
     [[ -n "$socket" ]] && break
     if ! kill -0 "$niri_pid" 2>/dev/null; then break; fi
@@ -60,6 +89,7 @@ if [[ -n "$nested_niri" && "$nested_niri" != "$private/runtime/"* ]]; then
 fi
 echo "DMS_HEADLESS_NIRI_PRIVATE_SOCKET_READY"
 echo "DMS_HEADLESS_NIRI_NO_SESSION_IMPORT"
+echo "DMS_HEADLESS_NIRI_NESTED_WITHIN_WESTON"
 status=0
 
 # Reuse the private D-Bus session and all private XDG paths, but expose
