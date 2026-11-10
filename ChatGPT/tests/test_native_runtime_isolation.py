@@ -21,18 +21,19 @@ class NativeRuntimeIsolationTests(unittest.TestCase):
         self.assertIn('NIRI_SOCKET=""', SCRIPT)
         self.assertIn('GSETTINGS_BACKEND="memory"', SCRIPT)
         self.assertIn('XDG_RUNTIME_DIR="$root/runtime"', SCRIPT)
-        self.assertIn('XDG_CONFIG_HOME="$root/config"', SCRIPT)
-        self.assertIn('XDG_DATA_HOME="$root/data"', SCRIPT)
-        self.assertIn('XDG_CACHE_HOME="$root/cache"', SCRIPT)
-        self.assertIn('XDG_STATE_HOME="$root/state"', SCRIPT)
-        self.assertIn('HOME="$root/home"', SCRIPT)
+        self.assertIn('XDG_CONFIG_HOME="$profile_root/config"', SCRIPT)
+        self.assertIn('XDG_DATA_HOME="$profile_root/data"', SCRIPT)
+        self.assertIn('XDG_CACHE_HOME="$profile_root/cache"', SCRIPT)
+        self.assertIn('XDG_STATE_HOME="$profile_root/state"', SCRIPT)
+        self.assertIn('HOME="$profile_root/home"', SCRIPT)
         self.assertIn('WAYLAND_DISPLAY="$socket"', SCRIPT)
 
     def test_sandbox_flags_and_deadline(self):
         self.assertIn("QTWEBENGINE_DISABLE_SANDBOX", SCRIPT)
         self.assertIn("QTWEBENGINE_CHROMIUM_FLAGS", SCRIPT)
         self.assertIn('[[ -S "$socket" ]]', SCRIPT)
-        self.assertIn("timeout --signal=TERM --kill-after=3s 60s", SCRIPT)
+        self.assertIn('timeout --signal=TERM --kill-after=3s "$duration"', SCRIPT)
+        self.assertIn("duration=60s", SCRIPT)
         for forbidden in ("sudo ", "pacman -S", "cmake --install",
                           "dms restart", "dms plugins install", "systemctl ", "--no-sandbox"):
             self.assertNotIn(forbidden, SCRIPT)
@@ -55,6 +56,7 @@ class NativeRuntimeIsolationTests(unittest.TestCase):
         self.assertIn('"--public-chatgpt"', SCRIPT)
         self.assertIn('DMS_NATIVE_ONLINE_PROBE="$online"', SCRIPT)
         self.assertIn('DMS_NATIVE_PERSISTENCE_PROBE="$persistent"', SCRIPT)
+        self.assertIn('DMS_NATIVE_AUTH_PROBE="$auth"', SCRIPT)
         self.assertIn('DO NOT SIGN IN', SCRIPT)
         self.assertIn('dbus-run-session --', SCRIPT)
         self.assertIn('DMS_SOCKET=""', SCRIPT)
