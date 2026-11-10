@@ -759,3 +759,31 @@ TTY-based recovery because the panel and other DMS child
 processes can be interrupted. Native webview plugin production
 integration and a functional Zen fallback remain *separate*
 upcoming changes, not implied by the host selection alone.
+
+## Opt-in systemd service switch prepared with timed auto-revert (2026-11-10)
+
+The user passed the 4-test **read-only** `preview_dms_override.sh
+--preview` on an active `dms.service`, with no existing drop-ins.
+The final, private staged argc=1 host has SHA256
+`af356f3885e51fa0f4a40697648cc97ca19e24342ca990c01a340d34092f696a`.
+No production DMS or systemd changes have been performed.
+
+`manage_dms_override.sh` has been staged in the feature branch but
+**has never been activated**. `--activate` refuses non-interactive
+execution, revalidates the live baseline and requires `ACTIVATE`
+typed in a terminal outside the DMS cgroup. It arms an
+independent `systemd-run --user --on-active=10min` rollback timer
+**before** writing the exact managed
+`50-chatgpt-private-qs.conf` drop-in and restarting `dms.service`.
+The `--confirm` mode verifies the running frontend points to the
+private binary before canceling the timer; `--rollback` checks a
+stored SHA256 before deleting only the managed drop-in and restarting
+stock DMS. TTY recovery is documented in the experiment README.
+The timer is a safety layer, not an absolute guarantee; the normal
+Zen production plugin remains as fallback.
+
+The user's next test is syntax/static validation of the new manager,
+not activation. DMS and its Bitwarden child processes will be
+interrupted by any later service restart; obtain **explicit** consent
+before doing so. A host swap does **not** install or enable the
+native ChatGPT widget inside the production plugin.
