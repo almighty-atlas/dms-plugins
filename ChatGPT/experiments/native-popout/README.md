@@ -865,3 +865,58 @@ test still proves only frontend instantiation and the
 not demonstrate `shell.ready` with a connected DMS backend,
 user plugin compatibility or production readiness.
 The prior `SCREENCOPY=OFF` host remains blocked.
+
+## Private mock-backend `shell.ready` handshake gate (prepared, pending)
+
+The user confirmed the **complete** headless Weston -> nested Niri ->
+corrected Quickshell frontend runtime gate passed all markers:
+`DMS_HEADLESS_ENTRY_INSTANTIATED: YES`,
+`DMS_HEADLESS_DMSSHELL_LOADED: YES`,
+`DMS_HEADLESS_FULL_UI_TYPE_ERRORS: NONE_DETECTED`,
+`DMS_HEADLESS_NO_LIVE_NIRI_OR_DMS_CHANGES`, and
+`DMS_HEADLESS_TEST_TERMINATED_AND_CLEANED`.
+This is successful real QML frontend initialization, with no
+live DMS backend involved.
+
+A follow-up isolates the actual `shell.ready` request path against
+a **mock** of the Go backend protocol. The pinned DMS `shell.qml`
+sends `shell.ready` only when its async shell loader is
+`Loader.Ready`, `DMSService.isConnected` is true, the backend advertises
+API v38 or newer, and `NOTIFY_SOCKET` is nonempty.
+`DMSService.qml` uses separate newline-delimited JSON request and
+subscription connections. The newly added Python
+`mock_dms_backend.py` serves **only a private AF_UNIX socket**
+under the temporary runtime path, sends a synthetic
+`service: server` subscription event with `apiVersion: 38`,
+and records receipt of a `shell.ready` request. It denies
+all other methods except a read-only `matugen.status` stub.
+It never connects to the live DMS daemon, real systemd notify
+or any TCP port and never accesses saved browser authentication.
+
+```bash
+python3 -m unittest discover -s ChatGPT/tests \
+  -p 'test_native_headless_mock_backend.py' -q
+bash ChatGPT/experiments/native-popout/run_dms_headless_niri.sh \
+  --mock-backend-probe
+```
+
+This reuses the private Weston/Niri compositor and pinned Quickshell
+candidate. Only the **Quickshell subprocess** receives
+`DMS_SOCKET` pointing to the synthetic socket and an inert
+`NOTIFY_SOCKET` path inside the isolated temp runtime. The user
+shell, real Niri, real DMS backend, systemd and installed plugins
+are untouched.
+
+Expected new markers:
+```text
+DMS_HEADLESS_MOCK_SHELL_READY_RECEIVED: YES
+DMS_HEADLESS_BACKEND_READY: MOCK_PROTOCOL_ONLY
+DMS_HEADLESS_TEST_TERMINATED_AND_CLEANED
+```
+
+The mock-protocol success proves that the patched host's complete
+DMS QML can emit the expected ready method in an isolated runtime.
+**It does not test the real Go backend's acceptance, API
+compatibility, startup orchestrator, stock user plugins, or full
+production readiness.** The old SCREENCOPY=OFF host activation
+remains retired; no live service change is authorized.
