@@ -816,3 +816,52 @@ behavior rather than the corrected Quickshell itself. Diagnose the
 reported failure before changing any live service. **Do not run
 the old `manage_dms_override.sh --activate`**, which remains
 blocked for the known broken host.
+
+## Correction after failed headless Niri startup (2026-11-10)
+
+The first full-DMS runtime trial failed **before Quickshell started**:
+
+```text
+Ran 6 tests ... OK
+DMS_HEADLESS_NIRI_START_FAILED: no private Wayland socket
+EventLoopCreation(... "neither WAYLAND_DISPLAY nor WAYLAND_SOCKET nor DISPLAY is set.")
+DMS_HEADLESS_PROBE_FAILED: inner process exited 1
+```
+
+This was **not** a DMS, QtWebEngine or Screencopy regression.
+The original runner attempted `NIRI_BACKEND=headless niri` without
+an existing Wayland display. Investigation of the *official* Niri
+v26.04 source (`src/main.rs`) confirmed that version does **not**
+select its headless backend from `NIRI_BACKEND`. Examples mentioning
+that variable refer to another branch/fork. Setting
+`WAYLAND_DISPLAY=""` did not create a compositor and Winit failed.
+
+**Replacement runtime topology:** a first, fully private **Weston
+headless** compositor (`weston --backend=headless --renderer=gl
+--no-config --shell=kiosk --socket=weston-dms-sandbox`) supplies
+a virtual display. A second, **nested** Niri v26.04 connects only
+to that Weston via its private `WAYLAND_DISPLAY`; the test
+Quickshell `shell.qml` connects only to nested Niri's own socket.
+No real Niri display, user shell, or DMS backend is reachable
+through forwarded IPC.
+
+The isolated launcher is still:
+```bash
+python3 -m unittest discover -s ChatGPT/tests \
+  -p 'test_native_headless_niri_full_ui.py' -q
+bash ChatGPT/experiments/native-popout/run_dms_headless_niri.sh --headless-probe
+```
+
+It now also requires an installed `weston` binary and fails
+closed if not available (`DMS_HEADLESS_BLOCKED: missing weston`).
+On Arch/CachyOS, the package is `weston` if the user elects to
+install it. No packages are installed by these scripts.
+The outer watchdog is now 52 seconds to allow both compositors
+to start; Niri and Weston are stopped by cleanup traps.
+
+**Not yet executed** on the user's desktop. Passing this
+test still proves only frontend instantiation and the
+`DMSShell.qml` loader status in an isolated session; it does
+not demonstrate `shell.ready` with a connected DMS backend,
+user plugin compatibility or production readiness.
+The prior `SCREENCOPY=OFF` host remains blocked.
