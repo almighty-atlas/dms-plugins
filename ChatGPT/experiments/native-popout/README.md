@@ -375,3 +375,56 @@ The test does not change `/usr/bin/qs`, `/usr/bin/quickshell`,
 ChatGPT plugin. The private authenticated profile is **not selected**
 by this test, and no account data are copied. The test has not been
 executed on the user's machine yet.
+
+## Versioned private Quickshell staging, with RUNPATH sanitization
+
+The user confirmed that the pinned patched host still opens the **real**
+offline DMS PluginPopout after copying from its build directory to a
+different path under `/tmp` (`--relocation-check`). This supports,
+but does not by itself prove, user-directory installation portability.
+
+New *explicit* staging script:
+
+```sh
+bash ChatGPT/experiments/native-popout/stage_private_host.sh --stage
+```
+
+It requires the tested build binary (exact SHA256
+`63e258a5b089565b9a93feca02bce7d5dc6602e719d2c66997356643601290f4`)
+and pinned source commit. It installs **only a copy** into the
+user-owned version directory:
+
+```text
+~/.local/share/dms-chatgpt-native-host/9b0f339-argc1-v01/
+├── host/quickshell
+└── bin/qs
+```
+
+The source binary has a colon-only `RUNPATH`; the script demands
+`patchelf`, removes the `RUNPATH` on the **new copy only**, confirms
+no RPATH/RUNPATH dynamic entry remains using `readelf`, and checks
+`ldd` for missing libraries. Directories are user-owned mode 0700;
+the script refuses symlinked/unowned files or a divergent existing
+same-version host. The shim delegates `qs` arguments via `exec` to
+the adjacent private host. No general PATH, systemd, stock binary,
+DMS config or plugin is changed.
+
+**Next isolated offline runtime check, after staging:**
+
+```sh
+bash ChatGPT/experiments/native-popout/run_native_popout.sh --staged-host-check
+```
+
+This launches the real DMS Popup, **offline local HTML only**, through
+the staged `bin/qs` shim under the previously isolated XDG/DBus
+test instance. Check the pill, click open and type into the test
+field. The persisted ChatGPT auth profile is not touched.
+
+If `patchelf` is unavailable, staging stops with a clear
+`DMS_PRIVATE_HOST_BLOCKED` message; it does not install packages.
+This staged private copy is still a prototype, **not yet selected
+by `dms.service`**. Full DMS plugin module compatibility and
+Qt version maintenance need separate review. Rollback for this
+staging-only step is simply not to enable the service override;
+do not delete or edit any live DMS or Zen profile. Do not stage
+a production override until explicit approval.
