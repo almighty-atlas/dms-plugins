@@ -336,3 +336,42 @@ The explicit probe briefly launches a separate Quickshell process,
 never a WebEngineView. A nonzero argc is **necessary but insufficient**
 for native embedding; QML modules and compatibility must also pass.
 Do not enable a production native widget on an unpatched host.
+
+## Built-frontend relocation gate, offline and without systemd changes
+
+The user's live DMS diagnostics confirm:
+- `/proc/1363/exe` resolves to stock `/usr/bin/quickshell`.
+- The DMS backend's PATH begins with `/usr/local/sbin:/usr/local/bin:/usr/bin`.
+- `ldd` on the patched `build-dms/src/quickshell` reports **no missing
+  linked shared libraries**.
+- ELF `RUNPATH` printed as `[::::::::::::::::::::::]`: effectively
+  empty path elements, with no explicit `/tmp` build directory listed.
+  This alone does **not** establish relocation of the Qt QML plugins.
+
+The existing `run_native_popout.sh` now has an explicit
+`--relocation-check` offline-only mode. It copies **only** the private
+patched test executable to a **different private path** at
+`/tmp/dms-chatgpt-native-v02/portable-host/quickshell`, verifies a
+matching SHA256 hash, checks for missing linked libraries and then
+executes the genuine DMS PluginPopout **with local HTML only** and the
+same isolated HOME/XDG/D-Bus runtime.
+
+```sh
+bash ChatGPT/experiments/native-popout/run_native_popout.sh --relocation-check
+```
+
+Check that the DMS test pill appears, the popup opens and text is
+accepted. A successful test proves basic runtime relocation to that
+second path *in the current environment*, **not** that the binary
+is safe to install system-wide or remains compatible after Qt/
+Quickshell updates. On QML import errors, review the missing modules
+before packaging: Quickshell's CMake output used
+`QT_QML_OUTPUT_DIRECTORY` under the build tree, and the earlier
+build issued a warning that `INSTALL_QMLDIR` and
+`INSTALL_QML_PREFIX` were unset. No module relocation was assumed.
+
+The test does not change `/usr/bin/qs`, `/usr/bin/quickshell`,
+`dms.service`, PATH, Niri settings, package files or the production
+ChatGPT plugin. The private authenticated profile is **not selected**
+by this test, and no account data are copied. The test has not been
+executed on the user's machine yet.
