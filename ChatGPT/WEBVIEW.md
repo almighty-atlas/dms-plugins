@@ -609,3 +609,47 @@ Do not put a replacement `qs` on the general interactive PATH or
 replace the pacman-owned binary. No changes to the user's DMS process,
 systemd units, Niri config, package database or production ChatGPT
 v0.1 plugin have been made.
+
+
+## Actual CachyOS DMS frontend startup method observed (2026-11-10)
+
+The user provided read-only host diagnostics:
+
+```text
+command -v qs      -> /usr/bin/qs
+readlink -f qs     -> /usr/bin/quickshell
+systemd --user dms.service: ActiveState=active
+FragmentPath=/usr/lib/systemd/user/dms.service
+ps -C dms,quickshell -o pid,ppid,comm: only PID 1254, comm dms (PPID 1047)
+```
+
+This confirms the active DMS **systemd user service** and
+`/usr/bin/qs` symlink to the stock `argc=0` host. It does **not**
+confirm the child frontend's current PID or executable: `ps -C`
+matches kernel comm names, which may not match `qs`, and the UI
+could be absent/restarting. Do not infer the frontend state from
+that narrow process list.
+
+**Proposed reversible integration, not yet implemented:** a service-
+scoped `PATH` prefix pointing to a dedicated `qs` wrapper that
+execs a *permanently installed*, validated private Quickshell build.
+This must be scoped exclusively to `dms.service` via an override
+under the user's systemd config, leaving `/usr/bin/quickshell`
+and the pacman-owned `/usr/bin/qs` untouched. The wrapper should
+use a stable absolute binary path, and no auto-update should
+silently replace it. Setting PATH for the DMS backend also affects
+its subprocesses, so the prefix must be narrow and preserve the
+existing PATH entries. Avoid copying only the compiled binary
+without checking linked QML modules, library loading, relocation,
+and installed Qt version compatibility.
+
+**Before any service or plugin change**, inspect:
+`systemctl --user show dms.service -p MainPID -p ExecStart
+-p FragmentPath -p DropInPaths -p ControlGroup`
+and `systemctl --user status dms.service --no-pager --lines=0`.
+Then assess whether DMS currently has a supervised `qs` frontend,
+whether a service override already exists, and a rollback that
+removes only the newly created override followed by a controlled
+restart. Changes require explicit user approval because restarting
+DMS can briefly remove desktop panels, launchers and polkit prompts.
+Keep the Zen v0.1 production widget until post-switch checks pass.
