@@ -1,5 +1,11 @@
 # Codex implementation handoff · ChatGPT DMS widget
 
+> **Historical implementation brief.** The v0.1 completion work is now recorded
+> in README.md and TESTING.md; WEBVIEW.md contains the researched v0.2 gate.
+> Read those current documents before treating any scaffold-era assumptions
+> below as outstanding work or current API evidence. Desktop acceptance is still
+> required; no graphical verification was possible on tiny02.
+
 ## Agent selection
 
 **Codex CLI · `gpt-6.1-sol` · reasoning `high`.** Use a stronger available model only if the client clearly supports it. Run inside a clean checkout of `almighty-atlas/dms-plugins`. This task is to make the v0.1 **browser plugin directly usable and verified**, not to build v0.2 prematurely.

@@ -1,131 +1,237 @@
 #!/usr/bin/env python3
-"""Generate site-scoped userContent.css for a *dedicated* Zen profile.
-
-Only applies safe, validated color literals. Reads DMS 2.x cache or legacy path.
-No network, no browser credentials, no third-party Python packages.
-"""
+"""Conservative, site-scoped CSS; standard library only, no browser DOM/auth access."""
 from __future__ import annotations
 
+import argparse
 import json
 import os
 from pathlib import Path
 import re
-import sys
 
-HEX = re.compile(r"^#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?$")
+from runtime import Failure, atomic_write, data_dir, locked, private_dir, read_json
+
+HEX = re.compile(r"^#[0-9a-fA-F]{6}$")
 DEFAULTS = {
-    "background": "#101116",
-    "surface": "#191a20",
-    "surfaceContainer": "#23242b",
-    "primary": "#b4c5ff",
-    "onSurface": "#e2e2e9",
-    "onSurfaceVariant": "#c3c5d0",
-    "outline": "#8d909c",
+    "background": "#101116", "surface": "#191a20", "surfaceContainer": "#23242b",
+    "primary": "#b4c5ff", "onPrimary": "#202f60", "onSurface": "#e2e2e9",
+    "onSurfaceVariant": "#c3c5d0", "outline": "#8d909c",
+}
+LIGHT = {
+    "background": "#faf8ff", "surface": "#f3f1fa", "surfaceContainer": "#eae7f0",
+    "primary": "#485d92", "onPrimary": "#ffffff", "onSurface": "#1b1b21",
+    "onSurfaceVariant": "#454650", "outline": "#757680",
 }
 ALIASES = {
-    "background": ("background", "surfaceDim"),
-    "surface": ("surface", "surfaceContainerLow"),
-    "surfaceContainer": ("surfaceContainer", "surfaceContainerHigh"),
-    "primary": ("primary", "accent"),
-    "onSurface": ("onSurface", "surfaceText"),
-    "onSurfaceVariant": ("onSurfaceVariant", "surfaceVariantText"),
-    "outline": ("outline", "outlineVariant"),
+    "background": ("background", "surface_dim"),
+    "surface": ("surface", "surface_container_low"),
+    "surfaceContainer": ("surfaceContainer", "surface_container", "surface_container_high"),
+    "primary": ("primary",), "onPrimary": ("onPrimary", "primaryText", "on_primary"),
+    # DMS Theme.surfaceText intentionally resolves to on_background in dynamic themes.
+    "onSurface": ("surfaceText", "onSurface", "on_background", "on_surface"),
+    "onSurfaceVariant": ("surfaceVariantText", "onSurfaceVariant", "on_surface_variant"),
+    "outline": ("outline", "outline_variant"),
 }
+MARKER = "DMS ChatGPT isolated profile v1\n"
 
 
-def cache_paths() -> list[Path]:
-    home = Path.home()
-    cache = Path(os.getenv("XDG_CACHE_HOME", home / ".cache"))
-    return [
-        cache / "dms" / "dms-colors.json",
-        cache / "DankMaterialShell" / "dms-colors.json",
-    ]
+def cache_paths():
+    cache = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache"))
+    return [cache / "dms/dms-colors.json", cache / "DankMaterialShell/dms-colors.json"]
 
 
-def read_palette(paths: list[Path] | None = None) -> tuple[dict[str, str], str]:
-    palette = DEFAULTS.copy()
+def parse_palette(payload, mode=None):
+    if not isinstance(payload, dict):
+        raise ValueError("palette must be an object")
+    mode = mode or payload.get("mode", "dark")
+    if mode not in ("light", "dark"):
+        raise ValueError("invalid theme mode")
+    container = payload.get("colors", payload)
+    if not isinstance(container, dict):
+        raise ValueError("invalid colors")
+    values = container.get(mode, container)
+    if not isinstance(values, dict):
+        raise ValueError("invalid scheme")
+    result = (LIGHT if mode == "light" else DEFAULTS).copy()
+    valid = 0
+    for key, aliases in ALIASES.items():
+        for alias in aliases:
+            value = values.get(alias)
+            if isinstance(value, str) and HEX.fullmatch(value):
+                result[key] = value.lower()
+                valid += 1
+                break
+    if not valid:
+        raise ValueError("no valid colors")
+    return result, mode
+
+
+def read_palette(paths=None):
     for path in paths if paths is not None else cache_paths():
-        if not path.is_file():
-            continue
         try:
-            payload = json.loads(path.read_text(encoding="utf-8"))
+            colors, _ = parse_palette(json.loads(path.read_text(encoding="utf-8")))
+            return colors, str(path)
         except (OSError, ValueError):
             continue
-        if not isinstance(payload, dict):
-            continue
-        # DMS palette exports differ across versions; tolerate common nesting.
-        variants = [payload]
-        for key in ("colors", "dark", "palette", "scheme"):
-            child = payload.get(key)
-            if isinstance(child, dict):
-                variants.append(child)
-        for name, aliases in ALIASES.items():
-            for item in variants:
-                for alias in aliases:
-                    color = item.get(alias)
-                    if isinstance(color, str) and HEX.fullmatch(color):
-                        palette[name] = color
-                        break
-                else:
-                    continue
-                break
-        return palette, str(path)
-    return palette, "fallback"
+    return DEFAULTS.copy(), "fallback"
 
 
-def render_css(palette: dict[str, str]) -> str:
-    p = palette
-    return f"""/* Generated by dms-chatgpt theme_sync.py. Do not edit manually.
-   Scoped to chatgpt.com. Selectors may change as ChatGPT evolves. */
-@-moz-document domain("chatgpt.com") {{
-  :root {{
-    --dms-chat-bg: {p['background']};
-    --dms-chat-surface: {p['surface']};
-    --dms-chat-raised: {p['surfaceContainer']};
-    --dms-chat-primary: {p['primary']};
-    --dms-chat-text: {p['onSurface']};
-    --dms-chat-muted: {p['onSurfaceVariant']};
-    --dms-chat-outline: {p['outline']};
-
-    --main-surface-primary: var(--dms-chat-bg) !important;
-    --main-surface-secondary: var(--dms-chat-surface) !important;
-    --sidebar-surface-primary: var(--dms-chat-surface) !important;
-    --sidebar-surface-secondary: var(--dms-chat-raised) !important;
-    --text-primary: var(--dms-chat-text) !important;
-    --text-secondary: var(--dms-chat-muted) !important;
+def render_css(palette, mode="dark"):
+    if mode not in ("dark", "light") or any(not HEX.fullmatch(palette[k]) for k in DEFAULTS):
+        raise ValueError("unsafe CSS palette")
+    variables = "\n".join(f"    --dms-{key}: {palette[key]};" for key in DEFAULTS)
+    # Do not hide navigation, change layout/display/position, or style generic buttons/forms.
+    # Both theme classes define website variables; override both without forcing its JS theme.
+    return f'''/* Generated by dms-chatgpt theme_sync.py. Do not edit manually. */
+@-moz-document url-prefix("https://chatgpt.com/") {{
+  :root, html.light, html.dark {{
+{variables}
+    color-scheme: {mode} !important;
+    --bg-primary: var(--dms-background) !important;
+    --bg-secondary: var(--dms-surface) !important;
+    --bg-tertiary: var(--dms-surfaceContainer) !important;
+    --main-surface-primary: var(--dms-background) !important;
+    --main-surface-secondary: var(--dms-surface) !important;
+    --main-surface-tertiary: var(--dms-surfaceContainer) !important;
+    --sidebar-surface-primary: var(--dms-surface) !important;
+    --sidebar-surface-secondary: var(--dms-surfaceContainer) !important;
+    --text-primary: var(--dms-onSurface) !important;
+    --text-secondary: var(--dms-onSurfaceVariant) !important;
+    --text-tertiary: var(--dms-onSurfaceVariant) !important;
+    --border-light: var(--dms-outline) !important;
+    --interactive-bg-accent-default: var(--dms-primary) !important;
+    --interactive-label-accent-default: var(--dms-onPrimary) !important;
   }}
-  html, body {{
-    background-color: var(--dms-chat-bg) !important;
-    color: var(--dms-chat-text) !important;
+  body {{ background-color: var(--dms-background) !important; color: var(--dms-onSurface) !important; }}
+  /* Public lightweight-web DOM inspected 2026-11-10. No generated class names. */
+  #web-mobile-root [data-app-shell],
+  #web-mobile-root main[data-slot="conversation"] {{
+    background-color: var(--dms-background) !important;
+    color: var(--dms-onSurface) !important;
   }}
-  #prompt-textarea, [data-testid="composer"] {{
-    border-radius: 18px !important;
+  #web-mobile-root #ds-sidebar, #web-mobile-root [data-slot="sidebar-rail"] {{
+    background-color: var(--dms-surface) !important;
+    color: var(--dms-onSurface) !important;
+  }}
+  #web-mobile-root [data-composer-wrap-inner] {{
+    background-color: var(--dms-surfaceContainer) !important;
+    border-color: var(--dms-outline) !important;
+    border-radius: 20px !important;
+  }}
+  #web-mobile-root [data-mobile-composer-prompt] {{
+    color: var(--dms-onSurface) !important;
+    caret-color: var(--dms-primary) !important;
+  }}
+  #prompt-textarea, [data-testid="composer"] {{ border-radius: 20px !important; }}
+  [data-message-author-role="user"] .rounded-3xl {{ border-radius: 20px !important; }}
+  @media (max-width: 800px) {{
+    [data-message-author-role] {{ scroll-margin-block: 16px; }}
   }}
 }}
-"""
+'''
 
 
-def sync(profile: Path) -> str:
-    if not profile.is_dir():
-        profile.mkdir(parents=True, exist_ok=True)
-    chrome = profile / "chrome"
-    chrome.mkdir(exist_ok=True)
-    colors, source = read_palette()
-    css = render_css(colors)
-    css_path = chrome / "userContent.css"
-    css_path.write_text(css, encoding="utf-8")
-    # In an isolated profile, this preference enables userContent.css.
-    user_js = profile / "user.js"
-    setting = 'user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);'
-    previous = user_js.read_text(encoding="utf-8") if user_js.exists() else ""
-    if setting not in previous:
-        with user_js.open("a", encoding="utf-8") as stream:
-            stream.write(setting + "\n")
+def profile_path(create=True):
+    profile = data_dir() / "zen-profile"
+    if profile.is_symlink():
+        raise Failure("Profilpfad darf kein Symlink sein.")
+    if not create and not profile.exists():
+        return None
+    if not profile.exists():
+        private_dir(profile)
+    elif not profile.is_dir() or profile.stat().st_uid != os.getuid():
+        raise Failure("Ungeeigneter Profilpfad oder fremder Eigentümer.")
+    if (profile / "chrome").is_symlink():
+        raise Failure("Profil-Chrome-Verzeichnis darf kein Symlink sein.")
+    marker = profile / ".dms-chatgpt-profile"
+    if marker.is_symlink():
+        raise Failure("Unsichere Profil-Markierung.")
+    if not marker.exists():
+        # Upgrade the scaffold at the same fixed path, but never adopt an arbitrary profile.
+        old_css = profile / "chrome/userContent.css"
+        entries = list(profile.iterdir())
+        if entries and (old_css.is_symlink() or not old_css.is_file() or
+                        not old_css.read_text().startswith("/* Generated by dms-chatgpt theme_sync.py.")):
+            raise Failure("Unbekanntes Profil am Plugin-Pfad. Nicht verändert; README zur Migration lesen.")
+        private_dir(profile)
+        atomic_write(marker, MARKER)
+    elif marker.read_text() != MARKER:
+        raise Failure("Unbekannte Profilversion; Plugin aktualisieren.")
+    private_dir(profile)
+    private_dir(profile / "chrome")
+    return profile
+
+
+def managed_prefs(profile, values):
+    path = profile / "user.js"
+    if path.is_symlink():
+        raise Failure("user.js darf kein Symlink sein.")
+    previous = path.read_text(encoding="utf-8") if path.exists() else ""
+    # Remove only the prefs this plugin owns, including old scaffold copies.
+    keys = "|".join(re.escape(k) for k in values)
+    previous = re.sub(r'^user_pref\("(?:' + keys + r')",[^\n]*\);\s*$', "", previous, flags=re.M)
+    block = "\n".join(f'user_pref({json.dumps(k)}, {json.dumps(v)});' for k, v in values.items())
+    atomic_write(path, previous.rstrip() + "\n" + block + "\n")
+
+
+def sync(palette=None, enabled=True, compact=True, create=True):
+    profile = profile_path(create)
+    if profile is None:
+        return "not-created"
+    mode = "dark"
+    snapshot = data_dir() / "theme.json"
+    if palette is not None:
+        colors, mode = parse_palette(palette)
+        atomic_write(snapshot, json.dumps({"mode": mode, "colors": colors}))
+        source = "DMS Theme (live snapshot)"
+    else:
+        try:
+            colors, mode = parse_palette(read_json(snapshot))
+            source = "DMS Theme (last snapshot)"
+        except ValueError:
+            colors, source = DEFAULTS.copy(), "fallback"
+            for path in cache_paths():
+                try:
+                    colors, mode = parse_palette(json.loads(path.read_text()))
+                    source = "DMS color cache"
+                    break
+                except (OSError, ValueError):
+                    continue
+    css = render_css(colors, mode) if enabled else "/* DMS ChatGPT site theme disabled. */\n"
+    atomic_write(profile / "chrome/userContent.css", css)
+    # Native compact mode keeps security indicators, menus, OAuth popups and Ctrl+L usable.
+    managed_prefs(profile, {
+        "toolkit.legacyUserProfileCustomizations.stylesheets": True,
+        "zen.view.compact.enable-at-startup": compact,
+        "zen.view.compact.hide-toolbar": compact,
+        "zen.view.compact.hide-tabbar": compact,
+        "zen.view.compact.show-sidebar-and-toolbar-on-hover": True,
+        "browser.shell.checkDefaultBrowser": False,
+        "browser.startup.page": 0,
+        "browser.sessionstore.resume_from_crash": False,
+        "datareporting.healthreport.uploadEnabled": False,
+        "datareporting.policy.dataSubmissionEnabled": False,
+        "toolkit.telemetry.enabled": False,
+    })
     return source
 
 
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--palette", help="JSON snapshot from DMS Theme; validated colors only")
+    parser.add_argument("--disabled", action="store_true")
+    parser.add_argument("--full-chrome", action="store_true")
+    args = parser.parse_args()
+    try:
+        with locked():
+            source = sync(json.loads(args.palette) if args.palette else None,
+                          not args.disabled, not args.full_chrome, create=False)
+        print(json.dumps({"status": "theme-prepared", "source": source,
+                          "note": "Stylesheets apply after a full isolated-browser restart."}))
+        return 0
+    except (Failure, OSError, ValueError):
+        print(json.dumps({"error": "Theme konnte nicht sicher vorbereitet werden. Profilpfad/Farben prüfen."}))
+        return 1
+
+
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        raise SystemExit("Usage: theme_sync.py PROFILE_PATH")
-    profile = Path(sys.argv[1]).expanduser()
-    print("ChatGPT theme source:", sync(profile))
+    raise SystemExit(main())

@@ -1,0 +1,15 @@
+{
+  "mode": "dark",
+  "colors": {
+    "dark": {
+      "background": "#141218", "surface": "#141218", "surface_container": "#211f26",
+      "primary": "#d0bcff", "on_primary": "#381e72", "on_background": "#e6e0e9",
+      "on_surface_variant": "#cac4d0", "outline": "#938f99"
+    },
+    "light": {
+      "background": "#fef7ff", "surface": "#fef7ff", "surface_container": "#f3edf7",
+      "primary": "#6750a4", "on_primary": "#ffffff", "on_background": "#1d1b20",
+      "on_surface_variant": "#49454f", "outline": "#79747e"
+    }
+  }
+}

@@ -3,7 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import qs.Common
 import qs.Modules.Plugins
-import qs.Widgets
+import qs.DCommon.Widgets
 
 PluginSettings {
     pluginId: "chatgptWeb"
@@ -31,7 +31,21 @@ PluginSettings {
         settingKey: "materialTheme"
         label: "DMS-Farben übernehmen"
         defaultValue: true
-        description: "Im isolierten Zen-Profil werden vor dem Start CSS-Farben aus ~/.cache/dms/dms-colors.json generiert. Änderungen werden beim nächsten vollständigen Browserstart sichtbar."
+        description: "Echte DMS-Farben inklusive Light/Dark und Custom Themes. CSS wird automatisch vorbereitet, aber erst nach vollständigem Beenden und erneutem Öffnen des isolierten Zen-Profils geladen."
+    }
+
+    ToggleSetting {
+        settingKey: "compactMode"
+        label: "Zen Compact Mode"
+        defaultValue: true
+        description: "Nur im isolierten Profil. Browserleisten bleiben per Hover und Ctrl+L erreichbar; Ctrl+Alt+S blendet die Seitenleiste ein. Änderungen benötigen einen vollständigen Browserneustart."
+    }
+
+    ToggleSetting {
+        settingKey: "followOutput"
+        label: "Fenster zum angeklickten Monitor holen"
+        defaultValue: false
+        description: "Beim ersten Öffnen auf dem DankBar-Monitor platzieren. Weitere Klicks fokussieren standardmäßig nur, ohne eigene Position/Größe zu verändern. Optional wird das bestehende isolierte Fenster zum angeklickten Monitor verschoben."
     }
 
     StyledText {

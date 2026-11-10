@@ -7,7 +7,7 @@
   "path": "ChatGPT",
   "author": "almighty-atlas",
   "description": "ChatGPT web app launcher for DMS with Zen profile and optional Material colors",
-  "dependencies": [],
+  "dependencies": ["python3"],
   "compositors": ["any"],
   "distro": ["any"]
 }

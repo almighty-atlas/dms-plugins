@@ -1,0 +1,34 @@
+# Optional: copy to .github/workflows/chatgpt.yml with a workflow-authorized push.
+name: ChatGPT plugin
+on:
+  push:
+    paths: ['ChatGPT/**', 'plugins/chatgpt-web.json', '.github/workflows/chatgpt.yml']
+  pull_request:
+    paths: ['ChatGPT/**', 'plugins/chatgpt-web.json', '.github/workflows/chatgpt.yml']
+permissions:
+  contents: read
+jobs:
+  offline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Regression suite and shell syntax
+        run: |
+          python3 -m unittest discover -s ChatGPT/tests -p 'test_*.py' -v
+          bash -n ChatGPT/scripts/launch.sh
+          python3 -m compileall -q ChatGPT/scripts ChatGPT/tests
+          git diff --check
+      - uses: actions/checkout@v4
+        with:
+          repository: duxlabs-dev/dux-shell
+          ref: 3548daab9a7595b6dff52a79eda4cccd3697fdd6
+          path: _dms-reference
+          submodules: recursive
+          persist-credentials: false
+      - name: QML syntax, upstream contracts, manifest schema and CSS parser
+        run: |
+          python3 -m pip install -r ChatGPT/tests/requirements-dev.txt
+          python3 ChatGPT/tests/validate_sources.py _dms-reference

@@ -1,4 +1,5 @@
 {
+  "$schema": "https://raw.githubusercontent.com/duxlabs-dev/dux-shell/master/quickshell/PLUGINS/plugin-schema.json",
   "id": "chatgptWeb",
   "name": "ChatGPT Web",
   "description": "Open ChatGPT from DankBar with optional Zen profile and DMS-colored website CSS",
@@ -9,5 +10,7 @@
   "component": "./Widget.qml",
   "settings": "./Settings.qml",
   "icon": "smart_toy",
+  "requires_dms": ">=2.0.0",
+  "dependencies": ["python3"],
   "permissions": ["process", "settings_read", "settings_write"]
 }
