@@ -154,8 +154,8 @@ if [[ "$shown_ini" != "$expected_ini" ]]; then
 fi
 # A terminal/process inside dms.service could be killed by its own
 # restart. Require the switch to be launched from a separate cgroup/TTY.
-if [[ -r "/proc/$/cgroup" ]] &&
-   grep -Fq "/dms.service" "/proc/$/cgroup"; then
+if [[ -r "/proc/$BASHPID/cgroup" ]] &&
+   grep -Fq "/dms.service" "/proc/$BASHPID/cgroup"; then
     echo "DMS_SWITCH_BLOCKED: run from a terminal outside the DMS service cgroup" >&2
     exit 1
 fi
