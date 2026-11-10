@@ -501,3 +501,30 @@ fallback and keep this PR in Draft.
 Next candidate should remain isolated from the v0.1 manifest until
 an explicit preflight gate for the Quickshell host exists; native
 login data should not be copied into or read from the Zen profile.
+
+
+## Authenticated ChatGPT request/response in native DMS popout confirmed (2026-11-10)
+
+User supplied a screenshot of the genuine isolated patched DMS
+`PluginPopout`, containing the prompt `Antworte ausschließlich mit
+TEST OK` and the expected assistant output `TEST OK`. This confirms
+that the authenticated embedded webview can **send a message and
+display an AI-generated reply**. The screenshot still includes the
+purple Stop-generation control; it does **not** conclusively prove
+that generation had ended at capture time, nor that background
+generation continues while the DMS popup is hidden.
+
+Next isolated runtime gate: while the model is producing a longer,
+harmless answer, dismiss the DMS popup, reopen it shortly afterward,
+and check whether the same conversation is still present and the
+reply has continued or completed. Inspect existing
+`DMS_NATIVE_POPOUT_STATE` and
+`DMS_NATIVE_WEBVIEW_CREATED/DESTROYED` markers **locally**;
+do not upload raw authentication logs or secret-bearing profiles.
+No code release, production shell or persistent account storage
+changes are required for this test.
+
+This result does not remove the hard blocker: the installed stock
+Quickshell host has `argc=0` while the isolated patched
+host has `argc=1`; the v0.1 Zen launcher remains the safe
+production fallback and this PR remains Draft.
