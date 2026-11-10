@@ -42,6 +42,26 @@ harness="$qml_root/ChatGPTNativeHarness.qml"
 binary=/tmp/dms-chatgpt-qs-v02-argc1/build-dms/src/quickshell
 source_dir=/tmp/dms-chatgpt-qs-v02-argc1/source
 
+if [[ "$screencopy_staged_host" == 1 ]]; then
+    new_stage="$HOME/.local/share/dms-chatgpt-native-host/9b0f339-argc1-screencopy-v02"
+    stage_script=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/stage_private_screencopy_host.sh
+    if [[ -L "$stage_script" || ! -f "$stage_script" ]] ||
+       ! stage_check=$(bash "$stage_script" --verify); then
+        echo "DMS_NATIVE_SCREENCOPY_STAGED_BLOCKED: stage verification failed" >&2
+        exit 1
+    fi
+    if [[ "$stage_check" != *"DMS_SCREENCOPY_PRIVATE_HOST_VERIFIED: YES"* ||
+          "$stage_check" != *"DMS_SCREENCOPY_PRIVATE_NO_SERVICE_CHANGE"* ]]; then
+        echo "DMS_NATIVE_SCREENCOPY_STAGED_BLOCKED: stage is unverified" >&2
+        exit 1
+    fi
+    binary="$new_stage/bin/qs"
+    cd -- "$new_stage/host"
+    echo "DMS_NATIVE_SCREENCOPY_STAGED_OFFLINE_ONLY"
+    echo "DMS_NATIVE_SCREENCOPY_STAGED_HOST: $new_stage/host/quickshell"
+    echo "DMS_NATIVE_SCREENCOPY_STAGED_NO_SERVICE_CHANGE"
+fi
+
 # The successful full-DMS Screencopy build is selected only by an
 # explicit offline-only mode. The original host and all login modes
 # retain their exact previous binaries and profiles.
@@ -230,26 +250,6 @@ if [[ "$staged" == 1 ]]; then
     echo "DMS_NATIVE_STAGED_HOST_TEST: $staged_host"
     echo "DMS_NATIVE_STAGED_QS_WRAPPER_TEST: $staged_shim"
     echo "DMS_NATIVE_STAGED_OFFLINE_ONLY"
-fi
-
-if [[ "$screencopy_staged_host" == 1 ]]; then
-    new_stage="$HOME/.local/share/dms-chatgpt-native-host/9b0f339-argc1-screencopy-v02"
-    stage_script=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/stage_private_screencopy_host.sh
-    if [[ -L "$stage_script" || ! -f "$stage_script" ]] ||
-       ! stage_check=$(bash "$stage_script" --verify); then
-        echo "DMS_NATIVE_SCREENCOPY_STAGED_BLOCKED: stage verification failed" >&2
-        exit 1
-    fi
-    if [[ "$stage_check" != *"DMS_SCREENCOPY_PRIVATE_HOST_VERIFIED: YES"* ||
-          "$stage_check" != *"DMS_SCREENCOPY_PRIVATE_NO_SERVICE_CHANGE"* ]]; then
-        echo "DMS_NATIVE_SCREENCOPY_STAGED_BLOCKED: stage is unverified" >&2
-        exit 1
-    fi
-    binary="$new_stage/bin/qs"
-    cd -- "$new_stage/host"
-    echo "DMS_NATIVE_SCREENCOPY_STAGED_OFFLINE_ONLY"
-    echo "DMS_NATIVE_SCREENCOPY_STAGED_HOST: $new_stage/host/quickshell"
-    echo "DMS_NATIVE_SCREENCOPY_STAGED_NO_SERVICE_CHANGE"
 fi
 
 if [[ "$auth" == 1 ]]; then
