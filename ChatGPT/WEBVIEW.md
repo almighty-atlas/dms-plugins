@@ -964,3 +964,33 @@ than automatically installing anything. Seven static/syntax
 tests cover the corrected chain. **Not yet run on CachyOS.**
 Do not interpret a successful test as full DMS backend
 readiness.
+
+## Isolated full frontend succeeded; shell.ready mock protocol gate prepared
+
+The user supplied a full success from the Weston headless ->
+nested Niri -> corrected Quickshell initialization:
+`DMS_HEADLESS_ENTRY_INSTANTIATED: YES`,
+`DMS_HEADLESS_DMSSHELL_LOADED: YES`,
+`DMS_HEADLESS_FULL_UI_TYPE_ERRORS: NONE_DETECTED` and
+`DMS_HEADLESS_TEST_TERMINATED_AND_CLEANED`.
+All processes were isolated, with the live DMS backend absent.
+
+New `mock_dms_backend.py` implements only the minimal
+new-line-JSON Unix-socket contract needed to test
+`DMSService.isConnected`, API v38 welcome subscription and
+`shell.ready`. The opt-in
+`run_dms_headless_niri.sh --mock-backend-probe` reuses the private
+Weston/nested Niri topology, passing only the Quickshell test
+subprocess a private `DMS_SOCKET` and inert nonempty
+`NOTIFY_SOCKET`. The private mock records a marker when
+`shell.ready` (with a valid pid) is received. Other API
+calls are denied. No real backend, global systemd socket or
+authentication profile is contacted.
+
+Five static and real-UNIX-socket unit tests in
+`test_native_headless_mock_backend.py` are prepared;
+**not yet executed** on CachyOS. Success will demonstrate the
+shell-ready IPC emission against a local mock, not
+production Go-backend readiness or full plugin operation.
+Further portably staged deployment and explicit rollback
+protection are still required. PR remains Draft.
