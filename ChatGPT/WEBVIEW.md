@@ -358,3 +358,17 @@ Unterkomponenten. Er prüft die exakt einzeilige gepatchte Quickshell-Quelle
 sowie Polkit/PipeWire-Entwicklungsabhängigkeiten, ohne zu installieren oder
 Prozesse zu starten. Das ist nur ein Quell-/Build-Gate. Die QML-Laufzeit,
 DMS-Singleton-Effekte, Desktop-Isolation und der echte Popout bleiben offen.
+
+## Native offline DMS PluginPopout runner ready (2026-11-10)
+
+User build result: `[1098/1098] Linking CXX executable src/quickshell`
+for the patched host with DMS QML modules. DMS source review confirmed
+that DMSService auto-connects using DMS_SOCKET if nonempty, and several
+singletons use standard writable XDG locations and run helper processes.
+The isolated runner therefore clears DMS_SOCKET and NIRI_SOCKET, uses
+private HOME/all XDG directories, an independent session DBus and
+in-memory GSettings, retaining only the Wayland display socket as an
+intentional host connection. It does not start the full DMS shell or
+touch the installed plugin. This reduces accidental backend interactions,
+but is not a kernel-level sandbox. Actual native popout runtime is
+still awaiting user verification.

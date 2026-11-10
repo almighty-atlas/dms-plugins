@@ -113,3 +113,37 @@ Wenn `DMS_HOST_CONFIGURED` erscheint, kann der neue Build anschließend
 mit `cmake --build /tmp/dms-chatgpt-qs-v02-argc1/build-dms -j2` kompiliert
 werden. Der native Popout-Harness darf bis zur Prüfung isolierter XDG-Pfade,
 QML-Module und DMS-Singleton-Nebenwirkungen **nicht** gestartet werden.
+
+## First real DMS PluginPopout runtime (offline, opt-in)
+
+The user confirmed the DMS-capable patched Quickshell build finished at
+`[1098/1098] Linking CXX executable src/quickshell`.
+
+The source review found that DMSService can connect to the live backend
+using `DMS_SOCKET`; SettingsData/Paths write under XDG paths; NiriService,
+Theme and other singleton initializers can trigger helper activity.
+`run_native_popout.sh` therefore launches a separate process with private
+HOME, XDG_CONFIG_HOME, XDG_DATA_HOME, XDG_CACHE_HOME, XDG_STATE_HOME,
+XDG_RUNTIME_DIR, private session DBus, in-memory GSettings, no
+DMS_SOCKET and no NIRI_SOCKET. The only intended shared session endpoint
+is the *absolute original Wayland compositor socket*, needed for
+on-screen display. This is **process state/IPC isolation**, not a
+kernel/filesystem sandbox.
+
+From the updated feature-branch checkout:
+
+```sh
+python3 -m unittest discover -s ChatGPT/tests -p test_native_runtime_isolation.py -q
+bash ChatGPT/experiments/native-popout/run_native_popout.sh
+```
+
+The test should show a small floating test pill. Click it to request
+the **real DMS PluginPopout**; check offline marker
+`DMS_NATIVE_POPOUT_HTML_LOADED` and the HTML input. Type `test`,
+dismiss by clicking outside, reopen, and test Escape. The command
+stops automatically after 60 seconds; a `timeout` exit status 124 is
+expected for an otherwise successful run.
+
+No website requests, ChatGPT login, credentials, production plugin edits
+or full DMS daemon/session launch. The experiment is unverified until
+the user's CachyOS runtime test.
