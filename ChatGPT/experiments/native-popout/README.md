@@ -482,3 +482,77 @@ Even after a service host switch, **native ChatGPT is not
 automatically installed as a production plugin**: the released
 `ChatGPT/Widget.qml` is still Zen-based. A separate, gated
 native widget with safe Zen fallback will be needed.
+
+## Transactional candidate DMS-only host switch (prepared; NOT activated)
+
+The user's read-only preview succeeded on CachyOS:
+`4 tests OK`, `DMS_OVERRIDE_PREVIEW_CHECKS: PASSED`, active DMS
+MainPID 1254, and private cleaned host SHA256
+`af356f3885e51fa0f4a40697648cc97ca19e24342ca990c01a340d34092f696a`.
+The proposed drop-in destination was
+`~/.config/systemd/user/dms.service.d/50-chatgpt-private-qs.conf`.
+No service files or running processes were changed by that preview.
+
+A separate, **NOT YET EXECUTED**, script
+`manage_dms_override.sh` implements three explicit modes:
+
+1. `--activate`: rechecks the live service and exact preview output,
+   verifies the pinned private host, refuses a process launched from
+   the DMS service cgroup and demands an interactive TTY plus typing
+   `ACTIVATE`. Installs a checksum marker and a stable rollback
+   controller under `~/.local/share/dms-chatgpt-native-host/
+   9b0f339-argc1-v01/control/`. **Before changing the service** it
+   arms an independent systemd transient user timer,
+   `dms-chatgpt-native-autorevert.timer`, to revert after **10 minutes**.
+   Only then does it create its uniquely named drop-in, reload the
+   user systemd manager and restart `dms.service`.
+2. `--confirm`: after a **successful, user-verified** bar/plugin
+   startup, checks `dms.service` is active and that a direct child
+   really runs the versioned patched `host/quickshell`; only then
+   cancels the rollback timer. **The user must run this within 10
+   minutes** if they want to retain the candidate.
+3. `--rollback`: also runnable from a TTY if the graphical DMS shell
+   fails. Checks the saved drop-in checksum and removes **only**
+   `50-chatgpt-private-qs.conf`, reloads the user systemd manager,
+   restarts DMS with the original `/usr/bin/qs`, and clears the
+   transaction marker. It does **not** require the private host
+   binary to be available.
+
+To review its static/syntax safety tests (read-only):
+
+```sh
+python3 -m unittest discover -s ChatGPT/tests \
+  -p 'test_native_dms_override_manage.py' -q
+```
+
+**Activation is intentionally not recommended without explicit approval
+and a rollback plan.** It interrupts the user's DMS bar and service
+children, including the Bitwarden helper. Use a terminal outside
+`dms.service`; do not rely on the DMS UI for recovery.
+
+Once approved, the activation command would be:
+
+```sh
+bash ChatGPT/experiments/native-popout/manage_dms_override.sh --activate
+```
+
+If the panel disappears, use an already-open terminal or a Linux TTY
+(e.g. Ctrl+Alt+F3, log in) and run:
+
+```sh
+bash ~/.local/share/dms-chatgpt-native-host/9b0f339-argc1-v01/control/manage_dms_override.sh --rollback
+```
+
+An independent timer should also attempt this rollback automatically,
+but it is **not a guarantee** against a dead user systemd manager,
+a deleted controller, or filesystem corruption. For manual emergency
+repair only, remove **the exact managed drop-in file**, run
+`systemctl --user daemon-reload` then
+`systemctl --user restart dms.service`.
+
+If DMS is functional on the patched host, explicitly confirm via the
+persistent controller's `--confirm` mode. Without confirmation,
+automatic rollback is expected after 10 minutes; it causes a second
+DMS restart. **Do not run activation just to inspect settings.**
+The original Zen ChatGPT v0.1 plugin remains unchanged: changing the
+host alone does not enable native ChatGPT in the production widget.
