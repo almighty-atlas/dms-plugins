@@ -16,6 +16,20 @@ class TestIsolatedQuickshellBuild(unittest.TestCase):
         self.assertNotIn("cmake --install", script)
         self.assertNotIn("systemctl", script)
 
+    def test_online_probe_is_ephemeral_and_explicit(self):
+        qml = (ROOT / "QuickshellChatGPTPageProbe.qml").read_text()
+        self.assertIn("import Quickshell", qml)
+        self.assertIn("import QtWebEngine", qml)
+        self.assertIn("FloatingWindow", qml)
+        self.assertIn('url: "https://chatgpt.com/"', qml)
+        self.assertIn("offTheRecord: true", qml)
+        self.assertIn("profile: temporaryProfile", qml)
+        self.assertIn("do not sign in", qml)
+        self.assertIn("DMS_PATCHED_QS_CHATGPT_PAGE_LOAD_SUCCEEDED", qml)
+        self.assertNotIn("persistentStoragePath", qml)
+        self.assertNotIn("runJavaScript(", qml)
+        self.assertNotIn("WebChannel", qml)
+
     def test_renderer_has_no_browser_state_or_network(self):
         qml = (ROOT / "QuickshellWebEngineProbe.qml").read_text()
         self.assertIn("import Quickshell", qml)

@@ -205,13 +205,24 @@ evidence that `argc=1` alone may be sufficient for its tested Qt build;
 the earlier initialization concerns are version-dependent and must
 be verified rather than assumed to require an additional patch.
 
-## Isolated argc=1 experiment prepared (not yet desktop-tested)
+## Isolated argc=1 experiment: tested on CachyOS (2026-11-10)
 
 The missing `cli11` build package was installed on the target system.
 The proof-of-concept scripts under `probes/webengine/` clone a pinned
 Quickshell 0.3.2 source snapshot into `/tmp`, patch only the copied
 `argc = 0` line to `1`, and configure a minimal test build.
 No installed Quickshell/DMS files, plugin manifest, browser profile or
-release v0.1.0 are changed. Follow the README's argv check before any
-WebEngine test, and do not treat a standalone renderer PASS as final
-embedded-DMS certification.
+release v0.1.0 are changed. Desktop results: CMake configuration succeeded (warnings from deliberately
+disabled modules were nonfatal); compilation completed at
+`[276/276] Linking CXX executable src/quickshell`. The user's patched
+binary returned `DMS_QS_ARGUMENT_COUNT=1` /
+`DMS_QS_ARGC_NONZERO`; a screenshot from the separate patched Quickshell
+process confirmed the offline HTML rendered with
+`DMS_PATCHED_QS_WEBENGINE_LOADED`. This is conclusive proof of an
+**in-Quickshell** WebEngineView renderer with the one-line fix for the
+tested reduced build, not proof of production DMS compatibility.
+
+Next opt-in gate: render the public ChatGPT landing page in the patched
+Quickshell process with an ephemeral `WebEngineProfile`, without login.
+See `QuickshellChatGPTPageProbe.qml` and the README. Do not treat the
+standalone renderer PASS as final embedded-DMS certification.

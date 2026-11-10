@@ -149,5 +149,35 @@ timeout --signal=TERM 15s \
 
 Expected: an independent 640×420 window rendering local HTML, and
 `DMS_PATCHED_QS_WEBENGINE_LOADED`. No ChatGPT network traffic, browser
-credentials or persistent storage are involved. This step is not yet tested
-on the user's desktop and proves no production DMS compatibility.
+credentials or persistent storage are involved. This step **passed on the user's desktop on 2026-11-10**: a screenshot\nconfirmed the rendered local HTML. It does not prove production DMS compatibility.
+
+## 6. Patched Quickshell + ChatGPT page-load probe (online, no login)
+
+**Preconditions verified on 2026-11-10:** the isolated Quickshell build
+completed (`[276/276] Linking CXX executable src/quickshell`), its argv probe
+reported `DMS_QS_ARGUMENT_COUNT=1`, and its **offline** WebEngineView
+rendered local HTML (user screenshot).
+
+To check the next gate, use **only the patched isolated executable** with
+the separate online QML config. Do not execute it with stock `quickshell`
+or inside the DMS session:
+
+```sh
+timeout --signal=TERM 25s \
+  /tmp/dms-chatgpt-qs-v02-argc1/build/src/quickshell --path \
+  /tmp/dms-chatgpt-webview-probe/ChatGPT/probes/webengine/QuickshellChatGPTPageProbe.qml
+```
+
+This explicitly requests the public `https://chatgpt.com/` landing page
+and its ordinary dependencies. It uses a separate `WebEngineProfile`
+with `offTheRecord: true`, does not read Zen cookies or DMS credentials,
+and makes no changes to the production plugin. **Do not enter credentials,
+send messages, or try to log in during this test.** Take a screenshot to
+verify visible contents; `DMS_PATCHED_QS_CHATGPT_PAGE_LOAD_SUCCEEDED`
+merely indicates a page navigation succeeded. A shell crash or blank
+screen is a FAIL, not a cue to run it inside production DMS.
+
+Even a successful result proves only public page rendering inside an
+independent patched Quickshell process. DMS popout lifecycle, focus, browser
+permissions, persistent account login, and an upstream-supported Quickshell
+binary remain separate release gates.
