@@ -934,3 +934,33 @@ Six static/shell-syntax tests in
 These markers do not imply `shell.ready` or production
 feature/plugin compatibility because DMS_SOCKET is deliberately
 empty. Never reactivate the retired SCREENCOPY=OFF candidate.
+
+## Headless Niri test failure and Weston-backed correction
+
+The user ran the first attempted isolated Niri runtime gate.
+Six static tests passed; no private Wayland socket appeared.
+Niri exited before any DMS/frontend startup with
+`EventLoopCreation(... neither WAYLAND_DISPLAY nor
+WAYLAND_SOCKET nor DISPLAY is set)`.
+
+The original plan incorrectly presumed that official Niri
+v26.04 supports a direct `NIRI_BACKEND=headless` switch.
+Inspection of that release's main/backend initialization shows
+the variable is not honored there. The error is in the test
+architecture, not in the previous Screencopy or ChatGPT tests.
+
+The runner has been corrected to require a private **Weston
+headless** parent, which creates an offscreen Wayland socket;
+a **nested Niri** then connects to that private Weston,
+and the corrected Quickshell host connects only to nested
+Niri. Neither compositor is launched with `--session`.
+No live desktop socket, DMS backend socket or systemd
+manager is shared; separate XDG/DBus and automatic cleanup
+remain in place.
+
+The test now requires `weston` installed. It will report
+`DMS_HEADLESS_BLOCKED: missing weston` if absent, rather
+than automatically installing anything. Seven static/syntax
+tests cover the corrected chain. **Not yet run on CachyOS.**
+Do not interpret a successful test as full DMS backend
+readiness.
