@@ -1,9 +1,10 @@
 # v0.2: native WebView research and implementation gate
 
 **Not implemented or enabled in v0.1.** Keep the isolated/regular browser launcher
-permanently available. Research date: 2026-11-10. No login or graphical WebEngine
-test was performed on tiny02; conclusions below distinguish source/API evidence
-from desktop experiments still needed.
+permanently available. Research date: 2026-11-10. The CachyOS desktop experiments
+below confirm Qt WebEngine and patched Quickshell rendering; **authentication,
+actual DMS popup integration and release safety remain unverified**. The early
+tiny02 research did not perform a graphical test.
 
 ## What is actually possible
 
@@ -241,3 +242,49 @@ an offline `PanelWindow` / Wlr layer-shell WebEngine renderer, to check
 whether Niri displays such a window and permits typing into its content.
 The actual DMS popout involves additional DPopout/PluginPopout lifecycle,
 focus, and geometry behavior and remains unverified.
+
+## DMS plugin host integration gate (source review 2026-11-10)
+
+Following the successful Wayland Layer-Shell + WebEngine keyboard test, the
+actual upstream DMS implementation was inspected:
+
+- `PluginComponent.qml` exposes `popoutContent`, `popoutWidth`,
+  `popoutHeight`, and `triggerPopout()`. Supplying a
+  `pillClickAction` overrides the native popup behavior; a native
+  experimental WebView widget must not keep the v0.1 Zen-launch click
+  action in that mode. DMS also supports hover-triggered popouts.
+- `PluginComponent` owns a `PluginPopout`, whose `pluginContent`
+  is sourced from the widget's `popoutContent`; it anchors the popup
+  through `PopoutManager`. Its own `Loader` is not a guarantee that
+  heavyweight web content will remain mounted across popup close/reopen.
+- `PluginPopout.qml` creates a focusable container and calls
+  `forceActiveFocus()` on opening; the parent container handles Escape
+  by closing the popup. An embedded `WebEngineView` must be tested
+  for text input, IME, history, popup keyboard focus, and whether
+  Escape is consumed unexpectedly.
+- `DPopout.qml` chooses a screen-dependent popup backend and includes
+  transient focus handling. Our `PanelWindow` test proves a standalone
+  Wayland layer-shell surface works on Niri, **not** that both DMS
+  backends, animations, focus, hover-dismiss and multi-monitor anchoring
+  are compatible.
+- The user confirmed the separate patched `build-layer` runtime
+  shows the offline WebEngine renderer **and accepts text input** in
+  the HTML field. This is not inferred from build success alone.
+
+**Architecture recommendation:** Keep the v0.1 launch-only widget
+as the production default and create a separate opt-in native-popout
+candidate under experiments, not in the production manifest. Give the
+WebEngine profile a stable owner outside the transient popup view,
+and instantiate the view only when needed. Ensure keyboard/hover
+dismissal cannot interrupt streaming or uploads without explicit
+handling. Validate a clone of DMS under the **patched** Quickshell
+binary with isolated config/state before testing the production shell.
+The currently installed Quickshell still reports `argc=0`;
+do not activate WebEngine in that process. A supported distribution
+mechanism for the `argc=1` host fix is a prerequisite to enabling
+native mode for users.
+
+Reviewed upstream files:
+https://github.com/duxlabs-dev/dux-shell/blob/master/quickshell/Modules/Plugins/PluginComponent.qml
+https://github.com/duxlabs-dev/dux-shell/blob/master/quickshell/Modules/Plugins/PluginPopout.qml
+https://github.com/duxlabs-dev/dux-shell/blob/master/quickshell/Widgets/DPopout.qml
