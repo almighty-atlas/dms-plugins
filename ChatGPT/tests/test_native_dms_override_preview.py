@@ -34,6 +34,8 @@ class DmsOverridePreviewTests(unittest.TestCase):
     def test_private_host_and_path_validation(self):
         self.assertIn('readelf -d "$private_host"', TEXT)
         self.assertIn('ldd "$private_host"', TEXT)
+        self.assertIn("DMS_OVERRIDE_PREVIEW_BLOCKED: private qs wrapper changed", TEXT)
+        self.assertIn('! "$HOME" =~', TEXT)
         self.assertIn('! -O "$f"', TEXT)
         self.assertIn('! "$live_path" =~', TEXT)
         self.assertIn('tr \'\\0\' \'\\n\' < "/proc/$pid/environ"', TEXT)
