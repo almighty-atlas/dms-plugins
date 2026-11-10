@@ -920,3 +920,67 @@ DMS QML can emit the expected ready method in an isolated runtime.
 compatibility, startup orchestrator, stock user plugins, or full
 production readiness.** The old SCREENCOPY=OFF host activation
 remains retired; no live service change is authorized.
+
+## Mock shell.ready gate succeeded; stage only the corrected v02 private host (next)
+
+On 2026-11-10 the user supplied the entire successful
+`run_dms_headless_niri.sh --mock-backend-probe` output:
+
+```text
+Ran 5 tests ... OK
+DMS_HEADLESS_WESTON_PRIVATE_SOCKET_READY
+DMS_HEADLESS_NIRI_PRIVATE_SOCKET_READY
+DMS_HEADLESS_MOCK_PRIVATE_SOCKET_READY
+DMS_HEADLESS_ENTRY_INSTANTIATED: YES
+DMS_HEADLESS_DMSSHELL_LOADED: YES
+DMS_HEADLESS_FULL_UI_TYPE_ERRORS: NONE_DETECTED
+DMS_HEADLESS_MOCK_SHELL_READY_RECEIVED: YES
+DMS_HEADLESS_BACKEND_READY: MOCK_PROTOCOL_ONLY
+DMS_HEADLESS_NO_LIVE_NIRI_OR_DMS_CHANGES
+DMS_HEADLESS_TEST_TERMINATED_AND_CLEANED
+```
+
+Gtk portal warnings in the fully isolated private D-Bus environment
+were **not fatal** and are unrelated to the prior `ScreencopyView`
+failure. This proves the corrected host's complete DMS frontend can
+emit `shell.ready` to the **private AF_UNIX mock**, but **does not**
+establish interoperability with the live Go DMS service, login,
+all user plugins or real display layout.
+
+The old v01 staged host **remains retired and untouched**.
+Do not run its existing `--activate`, or reactivate the original
+persistent controller from the earlier failed test.
+
+Next, a new private *user-owned, separate v02* host can be staged
+without changing a single live service:
+
+```sh
+python3 -m unittest discover -s ChatGPT/tests \
+  -p 'test_native_screencopy_stage.py' -q
+bash ChatGPT/experiments/native-popout/stage_private_screencopy_host.sh --stage
+bash ChatGPT/experiments/native-popout/stage_private_screencopy_host.sh --verify
+bash ChatGPT/experiments/native-popout/run_native_popout.sh \
+  --screencopy-staged-host-check
+```
+
+The staging script verifies the pinned source, exact one-line argc
+patch, Screencopy CMake build flags, shared library dependencies and
+owner-controlled directories; copies only the **new** build
+`build-dms-screencopy-v01/src/quickshell` to
+`~/.local/share/dms-chatgpt-native-host/9b0f339-argc1-screencopy-v02/`.
+On that *copy*, it removes RPATH/RUNPATH, saves its new SHA256,
+creates the `bin/qs` private wrapper and refuses to overwrite an
+existing v02 directory. No sudo/systemd/Pacman, live dms, or user
+auth profile is touched.
+
+The new explicit `--screencopy-staged-host-check` verifies the
+manifest/hash/wrapper and runs the **genuine DMS PluginPopout** with
+local offline HTML and the *relocated v02 host*. The tested original
+non-staged and v01 runner modes remain unchanged. This test is
+interactive for at most 60 seconds. Success **still does not
+authorize the production service switch**; we must separately
+inspect v02's absolute runtime behavior and design an independent
+new controller with safe rollback and service readiness checks.
+
+Six static/Bash-syntax tests prepared in
+`test_native_screencopy_stage.py`. **Not executed on CachyOS yet**.
