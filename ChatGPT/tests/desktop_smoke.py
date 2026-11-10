@@ -65,6 +65,11 @@ class Smoke:
                           "-p", "test_*.py"], 90)
         self.result("Offline regression suite", "PASS" if tests.returncode == 0 else "FAIL")
         if tests.returncode:
+            # Only local Python unittest diagnostics; no compositor, browser,
+            # credential or window-title logs are collected here.
+            details = (tests.stdout + "\n" + tests.stderr).strip()
+            if details:
+                print("Offline-Testfehler (unittest):\n" + details[-8000:], flush=True)
             return
         ready = bool(os.environ.get("WAYLAND_DISPLAY") and os.environ.get("NIRI_SOCKET"))
         self.result("Wayland + Niri session", "PASS" if ready else "FAIL")
