@@ -787,3 +787,44 @@ not activation. DMS and its Bitwarden child processes will be
 interrupted by any later service restart; obtain **explicit** consent
 before doing so. A host swap does **not** install or enable the
 native ChatGPT widget inside the production plugin.
+
+## Confirmed root cause and isolated Screencopy-enabled rebuild (2026-11-10)
+
+The user checked the exact failed private-build cache:
+```text
+SCREENCOPY:BOOL=OFF
+SCREENCOPY_HYPRLAND_TOPLEVEL:BOOL=ON
+SCREENCOPY_ICC:BOOL=ON
+SCREENCOPY_WLR:BOOL=ON
+WAYLAND:BOOL=ON
+```
+The screenshot-free failed-invocation log provided earlier identifies
+`ScreencopyView is not a type` in the pinned DMS
+`Modals/DLauncherV2/TileItem.qml[71:13]`, followed by an incomplete
+DMS readiness handshake. This is a **confirmed build-configuration
+cause**: parent `SCREENCOPY=OFF` overrides the ON subfeatures and
+excludes the Quickshell.Wayland._Screencopy implementation.
+
+The previous pinned private host is **not suitable for full DMS**.
+The feature branch now blocks further activation of that retired
+candidate in `manage_dms_override.sh --activate`; rollback and
+confirmation code remain available. An earlier persistent copy may
+exist on the user host and must not be used to activate anything.
+User has reverted to working stock DMS with empty DropInPaths.
+
+A separate, source-validated, configure-only build script
+`prepare_quickshell_dms_screencopy.sh` targets
+`build-dms-screencopy-v01` with `SCREENCOPY=ON` and all three
+Wayland capture backends enabled. The script validates GBM,
+Vulkan headers, Qt-related deps, source pin and the one-line argc
+patch, and confirms the resulting CMake cache.
+`ScreencopyViewImportProbe.qml` and
+`verify_quickshell_screencopy.sh --offline-probe` provide a
+separate, 8-second, private-XDG, offline runtime test of the
+previously absent QML type, with no DMS_SOCKET or NIRI_SOCKET.
+
+**Not yet executed:** the new CMake configure, compilation, or
+ScreencopyView runtime probe on the user's CachyOS system.
+The old SHA256-pinned host installer and systemd candidate are
+not repointed. Even if the probe passes, a full, separate DMS
+readiness test remains necessary before another production switch.
