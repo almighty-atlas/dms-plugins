@@ -36,6 +36,17 @@ class PublicChatGptProbeTests(unittest.TestCase):
         self.assertIn('DMS_NATIVE_PERSISTENCE_PROBE="$persistent"', RUNNER)
         self.assertIn('DO NOT SIGN IN', RUNNER)
 
+    def test_opt_in_login_has_distinct_persistent_profile(self):
+        self.assertIn('authProbe: Quickshell.env("DMS_NATIVE_AUTH_PROBE") === "1"', WIDGET)
+        self.assertIn('id: authProfileFactory', WIDGET)
+        self.assertIn('storageName: "dms-chatgpt-auth-probe-v01"', WIDGET)
+        self.assertIn('authProfileFactory.instance()', WIDGET)
+        self.assertIn('elif [[ "$#" == 1 && "$1" == "--auth-chatgpt" ]]', RUNNER)
+        self.assertIn('DMS_NATIVE_AUTH_PROBE="$auth"', RUNNER)
+        self.assertIn('duration=300s', RUNNER)
+        self.assertIn('dms-chatgpt-native-auth-probe', RUNNER)
+        self.assertIn('do not share credentials', RUNNER)
+
     def test_runner_requires_explicit_opt_in(self):
         self.assertIn('if [[ "$#" == 0 ]]', RUNNER)
         self.assertIn('elif [[ "$#" == 1 && "$1" == "--public-chatgpt" ]]', RUNNER)
@@ -45,7 +56,8 @@ class PublicChatGptProbeTests(unittest.TestCase):
         self.assertIn('DMS_SOCKET=""', RUNNER)
         self.assertIn('NIRI_SOCKET=""', RUNNER)
         self.assertIn("dbus-run-session --", RUNNER)
-        self.assertIn("timeout --signal=TERM --kill-after=3s 60s", RUNNER)
+        self.assertIn('timeout --signal=TERM --kill-after=3s "$duration"', RUNNER)
+        self.assertIn("duration=60s", RUNNER)
 
 if __name__ == "__main__":
     unittest.main()
