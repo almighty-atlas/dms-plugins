@@ -4,9 +4,13 @@
 set -euo pipefail
 umask 077
 
-if [[ "$#" != 1 || "$1" != "--headless-probe" ]]; then
-    echo "Usage: bash run_dms_headless_niri.sh --headless-probe" >&2
+if [[ "$#" != 1 || ( "$1" != "--headless-probe" && "$1" != "--mock-backend-probe" ) ]]; then
+    echo "Usage: bash run_dms_headless_niri.sh --headless-probe|--mock-backend-probe" >&2
     exit 2
+fi
+mock_backend=0
+if [[ "$1" == "--mock-backend-probe" ]]; then
+    mock_backend=1
 fi
 
 root=/tmp/dms-chatgpt-native-v02
@@ -17,6 +21,7 @@ build_dir=/tmp/dms-chatgpt-qs-v02-argc1/build-dms-screencopy-v01
 binary="$build_dir/src/quickshell"
 script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
 inner="$script_dir/run_dms_headless_niri_inner.sh"
+mock_script="$script_dir/mock_dms_backend.py"
 dms_pin=e46ccbc1d58930d6a189cd1c90b276db2d64bf42
 common_pin=0877466a25b8e191a865bf75d0e500de6351ae04
 
@@ -27,9 +32,9 @@ for tool in weston niri git python3 timeout dbus-run-session mktemp grep; do
     fi
 done
 if [[ -L "$root" || -L "$dms_source" || -L "$build_dir" ||
-      -L "$binary" || -L "$inner" ||
+      -L "$binary" || -L "$inner" || -L "$mock_script" ||
       ! -d "$dms_source/.git" || ! -d "$dcommon" ||
-      ! -f "$qml_root/shell.qml" || ! -f "$inner" ||
+      ! -f "$qml_root/shell.qml" || ! -f "$inner" || ! -f "$mock_script" ||
       ! -O "$root" || ! -O "$build_dir" ||
       ! -f "$binary" || ! -x "$binary" || ! -O "$binary" ||
       "$(readlink "$qml_root/DCommon" 2>/dev/null)" != "../dux-qml-common/DCommon" ]]; then
@@ -86,7 +91,11 @@ Path(sys.argv[2]).write_text(source.replace(a, b).replace(c, d), encoding="utf-8
 PY
 
 echo "DMS_HEADLESS_NIRI_PROBE: Weston headless -> nested Niri, no --session"
-echo "DMS_HEADLESS_DMS_BACKEND: DISCONNECTED_BY_DESIGN"
+if [[ "$mock_backend" == 1 ]]; then
+    echo "DMS_HEADLESS_DMS_BACKEND: PRIVATE_MOCK_ONLY"
+else
+    echo "DMS_HEADLESS_DMS_BACKEND: DISCONNECTED_BY_DESIGN"
+fi
 echo "DMS_HEADLESS_LIVE_NIRI_SOCKET: NOT_FORWARDED"
 # env -i prevents inherited session/process IPC, graphics overrides,
 # user config, or leaking the current DISPLAY/NIRI_SOCKET to this test.
@@ -104,7 +113,7 @@ status=0
     DMS_DISABLE_HOT_RELOAD="1" \
     dbus-run-session -- \
     timeout --signal=TERM --kill-after=5s 52s \
-    /usr/bin/bash "$inner" --inner "$private" "$binary" "$fixture" || status=$?
+    /usr/bin/bash "$inner" --inner "$private" "$binary" "$fixture" "$mock_backend" "$mock_script" || status=$?
 
 if [[ "$status" != 0 ]]; then
     echo "DMS_HEADLESS_PROBE_FAILED: inner process exited $status" >&2
