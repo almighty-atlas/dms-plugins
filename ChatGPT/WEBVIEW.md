@@ -204,3 +204,14 @@ ever testing the actual DMS config. Issue #1393 includes experimental
 evidence that `argc=1` alone may be sufficient for its tested Qt build;
 the earlier initialization concerns are version-dependent and must
 be verified rather than assumed to require an additional patch.
+
+## Isolated argc=1 experiment prepared (not yet desktop-tested)
+
+The missing `cli11` build package was installed on the target system.
+The proof-of-concept scripts under `probes/webengine/` clone a pinned
+Quickshell 0.3.2 source snapshot into `/tmp`, patch only the copied
+`argc = 0` line to `1`, and configure a minimal test build.
+No installed Quickshell/DMS files, plugin manifest, browser profile or
+release v0.1.0 are changed. Follow the README's argv check before any
+WebEngine test, and do not treat a standalone renderer PASS as final
+embedded-DMS certification.

@@ -98,3 +98,56 @@ Even with a nonzero count, early WebEngine/graphics initialization and
 all login/profile/permission gates remain unverified. Do not load the
 WebEngineView into the live DMS shell or modify installed Quickshell
 without a separately reviewed, supported fix.
+
+## 5. Separate pinned Quickshell `argc=1` experiment (opt-in)
+
+**Do not replace the installed Quickshell or load WebEngine inside DMS.**
+On the target CachyOS system, `cli11` is now installed and the stock
+Quickshell 0.3.2 argv probe confirmed `DMS_QS_ARGC_ZERO`.
+
+From the v0.2 feature-branch checkout, first check/build ONLY a separate
+Quickshell source copy:
+
+```sh
+bash ChatGPT/probes/webengine/prepare_quickshell.sh
+```
+
+The helper clones the upstream source at pinned commit
+`9b0f339b19057f4731bf3b48293307d7ef241671`,
+refuses unexpected upstream changes, and modifies only
+`src/launch/launch.cpp` in its `/tmp` copy. The one-line source change
+sets `auto qArgC = 1;` instead of `0;`. It runs a reduced CMake configure,
+with optional Quickshell Wayland/service modules disabled only for this
+test; Qt Quick's own Wayland QPA plugin remains available.
+This is a source experiment, **not** a compatible replacement DMS build.
+
+If configure succeeds:
+
+```sh
+cmake --build /tmp/dms-chatgpt-qs-v02-argc1/build -j2
+```
+
+Then check the patched binary's argv without WebEngine, before trying
+a renderer:
+
+```sh
+timeout --signal=TERM 5s \
+  /tmp/dms-chatgpt-qs-v02-argc1/build/src/quickshell --path \
+  /tmp/dms-chatgpt-webview-probe/ChatGPT/probes/webengine/QuickshellArgsProbe.qml
+```
+
+Expected: `DMS_QS_ARGC_NONZERO`. If it reports ZERO, stop. A `timeout`
+exit status 124 is normal because the diagnostic stays idle until timeout.
+
+Only if the argv probe reports NONZERO, use the **separate patched binary**:
+
+```sh
+timeout --signal=TERM 15s \
+  /tmp/dms-chatgpt-qs-v02-argc1/build/src/quickshell --path \
+  /tmp/dms-chatgpt-webview-probe/ChatGPT/probes/webengine/QuickshellWebEngineProbe.qml
+```
+
+Expected: an independent 640×420 window rendering local HTML, and
+`DMS_PATCHED_QS_WEBENGINE_LOADED`. No ChatGPT network traffic, browser
+credentials or persistent storage are involved. This step is not yet tested
+on the user's desktop and proves no production DMS compatibility.
