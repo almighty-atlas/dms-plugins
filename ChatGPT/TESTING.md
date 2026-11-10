@@ -145,7 +145,7 @@ Diagnostic JSON is 0600 under `${XDG_STATE_HOME:-~/.local/state}/dms-chatgpt/`.
 It contains named PASS/FAIL/SKIP results and extracted numeric versions only.
 Keep it locally or share it without adding private browser/shell logs.
 
-### Required acceptance matrix (all still unverified here)
+### Desktop acceptance matrix (guided smoke PASS; extended cases still open)
 
 | Desktop check | Automated portion / remaining observation |
 | --- | --- |
@@ -163,13 +163,24 @@ Keep it locally or share it without adding private browser/shell logs.
 | Two monitors | First open on clicked output, repeat preserves position, optional follow-output moves only ChatGPT; hotplug |
 | Existing profile | Normal Zen session stays intact; no plugin CSS/preferences in it; fallback behavior honestly best effort |
 | Lifecycle failures | Close profile during launch, IPC outage, Zen upgrade/ignored app-ID: clear error/retry, no lock deletion |
-| Registry lifecycle | **After merge** on a fresh DMS profile: registry add/install/update/uninstall, scan and enable |
+| Registry lifecycle | After merge, user confirmed registry installation and normal operation. Registry update/uninstall and clean-machine setup not yet independently tested |
 | Local lifecycle | Installer tested with temp dirs; on desktop verify install/link, reload/update, disable/uninstall with profile retained |
 
 No auto-close/kill, production-service restart, Niri edit, browser cookie access,
 API usage, paid service or automatic PR merge is part of these tests.
 
 ## CachyOS desktop feedback – 2026-11-10 (manual, user-confirmed)
+
+- All guided desktop smoke checks reported **PASS**, including the horizontal
+  and vertical DankBar widget, Settings, login, chat use, focus, Compact Mode,
+  floating window, profile persistence and attachment interactions.
+- After PR #5 was squash-merged (`34cdbbe`) to `master`, the registry-installed
+  plugin was user-confirmed to work as before. The active installation resolves
+  to `~/.config/dms/plugins/.repos/<registry-checkout>/ChatGPT`, not the old
+  development checkout.
+- No automated CI or independent clean-machine regression has been run.
+  Not every extended row above (e.g., all theme variants and rare failure paths)
+  was individually confirmed.
 
 - DMS widget click opens and subsequently focuses the same ChatGPT window.
   Hover no longer triggers focus/launch oscillation.
@@ -181,7 +192,8 @@ API usage, paid service or automatic PR merge is part of these tests.
   No stable class was inferred from the generated class/ID.
 - The new CSS override explicitly colors `html.chatgpt-theme` and its MAIN
   using the DMS background token, scoped to `https://chatgpt.com/`.
-  **Visual correctness after profile restart is still unverified.**
+  Visual improvement after a full isolated-profile restart was confirmed by
+  user screenshots.
 
 ## Authenticated CSS diagnostics – 2026-11-10
 
@@ -201,6 +213,7 @@ and do **not** establish that the DMS stylesheet was absent.
 
 The generated CSS now styles these surfaces using only stable selectors and
 DMS palette variables. No chat text, URLs, DOM IDs, export JSONs or generated
-CSS-module hashes are stored. Live verification remains outstanding:
-composer contrast/clickability, sidebar hover, user-message contrast,
-code block readability/copy actions, light/dark themes and wider viewport.
+CSS-module hashes are stored. The default dark theme, composer, user-message appearance and code-block color
+updates were visually confirmed by the user after a restart; the guided smoke
+test reported PASS. Light-theme colors, dialogs, and wider viewports remain
+candidates for further testing.
