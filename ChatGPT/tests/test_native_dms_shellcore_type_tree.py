@@ -47,7 +47,8 @@ class ShellCoreTypeTreeTests(unittest.TestCase):
         self.assertIn('trap cleanup EXIT', PROBE)
         self.assertIn('rm -f -- "$fixture"', PROBE)
         self.assertIn('rm -rf -- "$private"', PROBE)
-        self.assertIn('! grep -Fq "DMS_SHELLCORE_QML_TYPE_TREE_READY"', PROBE)
+        self.assertIn('! grep -Fq "$expected_ready"', PROBE)
+        self.assertIn('expected_ready=DMS_SHELLCORE_QML_TYPE_TREE_READY', PROBE)
         self.assertIn('DMS_SHELLCORE_QML_TYPE_TREE_FAILED', PROBE)
         for forbidden in (
             "sudo ", "pacman -S", "systemctl --user restart",
