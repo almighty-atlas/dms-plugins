@@ -436,3 +436,26 @@ XDG paths. The test is intended only to check non-sensitive cookie
 consent after a complete process restart; no login, profile import
 from Zen, filesystem installation or production DMS activation.
 Its runtime result is **pending**.
+
+## User confirmed persistent consent; isolated login mode staged
+
+On 2026-11-10 the user reported the consent dialog **did not reappear**
+after a complete Quickshell restart in `--persistent-chatgpt`.
+This verifies persistence of that website preference only;
+no authentication or message streaming has been tested.
+
+A separately named WebEngine profile,
+`dms-chatgpt-auth-probe-v01`, can now be selected with an explicit
+`--auth-chatgpt` runner flag. Its local sensitive data are stored
+in `~/.local/share/dms-chatgpt-native-auth-probe/`, with a
+0700 directory mode, rather than in temporary `/tmp` storage.
+That data may include active bearer cookies and tokens and must not
+be published. A separate 300-second bounded runner preserves the
+DMS_SOCKET/NIRI_SOCKET isolation and does not use Zen's user profile.
+Authentication is solely a user-driven interaction in the browser.
+
+**Not yet verified**: login UI flow, authentication callback handling,
+2FA/passkeys/SSO, authenticated session persistence, browser-profile
+migration, real ChatGPT message streaming, and production installation.
+The upstream argc=1 host fix remains mandatory for native DMS mode;
+the feature stays in draft.
