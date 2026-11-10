@@ -10,6 +10,7 @@ auth=0
 relocation=0
 staged=0
 screencopy_host=0
+screencopy_staged_host=0
 duration=60s
 if [[ "$#" == 0 ]]; then
     : # default: local HTML only
@@ -28,8 +29,10 @@ elif [[ "$#" == 1 && "$1" == "--staged-host-check" ]]; then
     staged=1
 elif [[ "$#" == 1 && "$1" == "--screencopy-host-check" ]]; then
     screencopy_host=1
+elif [[ "$#" == 1 && "$1" == "--screencopy-staged-host-check" ]]; then
+    screencopy_staged_host=1
 else
-    echo "Usage: run_native_popout.sh [--public-chatgpt|--persistent-chatgpt|--auth-chatgpt|--relocation-check|--staged-host-check|--screencopy-host-check]" >&2
+    echo "Usage: run_native_popout.sh [--public-chatgpt|--persistent-chatgpt|--auth-chatgpt|--relocation-check|--staged-host-check|--screencopy-host-check|--screencopy-staged-host-check]" >&2
     exit 2
 fi
 
@@ -227,6 +230,26 @@ if [[ "$staged" == 1 ]]; then
     echo "DMS_NATIVE_STAGED_HOST_TEST: $staged_host"
     echo "DMS_NATIVE_STAGED_QS_WRAPPER_TEST: $staged_shim"
     echo "DMS_NATIVE_STAGED_OFFLINE_ONLY"
+fi
+
+if [[ "$screencopy_staged_host" == 1 ]]; then
+    new_stage="$HOME/.local/share/dms-chatgpt-native-host/9b0f339-argc1-screencopy-v02"
+    stage_script=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/stage_private_screencopy_host.sh
+    if [[ -L "$stage_script" || ! -f "$stage_script" ]] ||
+       ! stage_check=$(bash "$stage_script" --verify); then
+        echo "DMS_NATIVE_SCREENCOPY_STAGED_BLOCKED: stage verification failed" >&2
+        exit 1
+    fi
+    if [[ "$stage_check" != *"DMS_SCREENCOPY_PRIVATE_HOST_VERIFIED: YES"* ||
+          "$stage_check" != *"DMS_SCREENCOPY_PRIVATE_NO_SERVICE_CHANGE"* ]]; then
+        echo "DMS_NATIVE_SCREENCOPY_STAGED_BLOCKED: stage is unverified" >&2
+        exit 1
+    fi
+    binary="$new_stage/bin/qs"
+    cd -- "$new_stage/host"
+    echo "DMS_NATIVE_SCREENCOPY_STAGED_OFFLINE_ONLY"
+    echo "DMS_NATIVE_SCREENCOPY_STAGED_HOST: $new_stage/host/quickshell"
+    echo "DMS_NATIVE_SCREENCOPY_STAGED_NO_SERVICE_CHANGE"
 fi
 
 if [[ "$auth" == 1 ]]; then
