@@ -16,7 +16,7 @@ qml_root="$dms_source/quickshell"
 dcommon="$dms_source/dux-qml-common"
 build_dir=/tmp/dms-chatgpt-qs-v02-argc1/build-dms-screencopy-v01
 binary="$build_dir/src/quickshell"
-script_dir=$(cd -- "$(dirname -- "\${BASH_SOURCE[0]}")" && pwd -P)
+script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
 source_fixture="$script_dir/DmsShellCoreLoadProbe.qml"
 dms_pin=e46ccbc1d58930d6a189cd1c90b276db2d64bf42
 common_pin=0877466a25b8e191a865bf75d0e500de6351ae04
@@ -45,8 +45,8 @@ if ! grep -Eq '^SCREENCOPY:BOOL=(ON|TRUE)$' "$build_dir/CMakeCache.txt"; then
     echo "DMS_SHELLCORE_PROBE_BLOCKED: Screencopy disabled in new host" >&2
     exit 1
 fi
-if [[ -z "\${XDG_RUNTIME_DIR:-}" || "\${XDG_RUNTIME_DIR:-}" != /* ||
-      ! -d "$XDG_RUNTIME_DIR" || -z "\${WAYLAND_DISPLAY:-}" ]]; then
+if [[ -z "${XDG_RUNTIME_DIR:-}" || "${XDG_RUNTIME_DIR:-}" != /* ||
+      ! -d "$XDG_RUNTIME_DIR" || -z "${WAYLAND_DISPLAY:-}" ]]; then
     echo "DMS_SHELLCORE_PROBE_BLOCKED: no active Wayland session" >&2
     exit 1
 fi
