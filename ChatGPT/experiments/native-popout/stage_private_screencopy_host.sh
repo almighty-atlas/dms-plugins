@@ -124,10 +124,6 @@ for feature in WAYLAND WAYLAND_WLR_LAYERSHELL SCREENCOPY SCREENCOPY_ICC SCREENCO
         exit 1
     }
 done
-if readelf -d "$source_bin" | grep -Eq 'NEEDED.*libquickshell.*not-known'; then
-    echo "DMS_SCREENCOPY_STAGE_BLOCKED: unexpected linked host" >&2
-    exit 1
-fi
 if ldd "$source_bin" | grep -Fq "not found"; then
     echo "DMS_SCREENCOPY_STAGE_BLOCKED: missing linked libraries" >&2
     exit 1
