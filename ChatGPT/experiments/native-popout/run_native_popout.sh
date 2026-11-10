@@ -6,6 +6,8 @@ umask 077
 
 online=0
 persistent=0
+auth=0
+duration=60s
 if [[ "$#" == 0 ]]; then
     : # default: local HTML only
 elif [[ "$#" == 1 && "$1" == "--public-chatgpt" ]]; then
@@ -13,8 +15,12 @@ elif [[ "$#" == 1 && "$1" == "--public-chatgpt" ]]; then
 elif [[ "$#" == 1 && "$1" == "--persistent-chatgpt" ]]; then
     online=1
     persistent=1
+elif [[ "$#" == 1 && "$1" == "--auth-chatgpt" ]]; then
+    online=1
+    auth=1
+    duration=300s
 else
-    echo "Usage: run_native_popout.sh [--public-chatgpt|--persistent-chatgpt]" >&2
+    echo "Usage: run_native_popout.sh [--public-chatgpt|--persistent-chatgpt|--auth-chatgpt]" >&2
     exit 2
 fi
 
@@ -84,16 +90,42 @@ for key in QTWEBENGINE_DISABLE_SANDBOX QTWEBENGINE_CHROMIUM_FLAGS; do
         exit 1
     fi
 done
-for dir in home config data cache state runtime; do
-    [[ ! -L "$root/$dir" ]] || {
-        echo "DMS_NATIVE_RUN_BLOCKED: symlinked private directory" >&2
+# Auth data lives in a separate user-owned 0700 directory so it survives
+# restarts and /tmp cleanup; the other three modes still use /tmp only.
+profile_root="$root"
+if [[ "$auth" == 1 ]]; then
+    if [[ -z "${HOME:-}" || "$HOME" != /* ]]; then
+        echo "DMS_NATIVE_RUN_BLOCKED: unsafe auth HOME" >&2
         exit 1
-    }
-    mkdir -p -m 700 "$root/$dir"
-    chmod 700 "$root/$dir"
+    fi
+    profile_root="$HOME/.local/share/dms-chatgpt-native-auth-probe"
+    if [[ -L "$profile_root" || ( -e "$profile_root" && ! -O "$profile_root" ) ]]; then
+        echo "DMS_NATIVE_RUN_BLOCKED: unsafe auth profile root" >&2
+        exit 1
+    fi
+    mkdir -p -m 700 "$profile_root"
+    chmod 700 "$profile_root"
+fi
+for dir in home config data cache state; do
+    if [[ -L "$profile_root/$dir" || ( -e "$profile_root/$dir" && ! -O "$profile_root/$dir" ) ]]; then
+        echo "DMS_NATIVE_RUN_BLOCKED: unsafe private profile directory" >&2
+        exit 1
+    fi
+    mkdir -p -m 700 "$profile_root/$dir"
+    chmod 700 "$profile_root/$dir"
 done
+[[ ! -L "$root/runtime" ]] || {
+    echo "DMS_NATIVE_RUN_BLOCKED: symlinked private runtime directory" >&2
+    exit 1
+}
+mkdir -p -m 700 "$root/runtime"
+chmod 700 "$root/runtime"
 
-if [[ "$persistent" == 1 ]]; then
+if [[ "$auth" == 1 ]]; then
+    echo "DMS_NATIVE_AUTH_TEST: isolated login permitted; 300 second timeout"
+    echo "DMS_NATIVE_AUTH_TEST: do not share credentials, tokens, or authentication URLs"
+    echo "DMS_NATIVE_AUTH_TEST: local private profile at $profile_root"
+elif [[ "$persistent" == 1 ]]; then
     echo "DMS_NATIVE_PERSISTENCE_TEST: https://chatgpt.com/; DO NOT SIGN IN"
     echo "DMS_NATIVE_PERSISTENCE_TEST: disk profile in private XDG directories"
     echo "DMS_NATIVE_PERSISTENCE_TEST: reject nonessential cookies, restart to check consent"
@@ -105,19 +137,19 @@ else
     echo "DMS_NATIVE_TEST_INSTRUCTIONS: click pill, type test, dismiss, reopen"
 fi
 echo "DMS_NATIVE_ISOLATION: private HOME, XDG and session DBus; DMS_SOCKET and NIRI_SOCKET blank"
-echo "DMS_NATIVE_AUTO_STOP: 60 seconds"
+echo "DMS_NATIVE_AUTO_STOP: $duration"
 # The compositor socket is deliberately shared so Niri can show the test
 # window; other user runtime sockets remain inaccessible via the private
 # XDG_RUNTIME_DIR. This is not a kernel/filesystem security sandbox.
 exec /usr/bin/env -i \
     PATH="/usr/bin:/bin" \
-    HOME="$root/home" \
+    HOME="$profile_root/home" \
     LANG="C.UTF-8" \
     XDG_RUNTIME_DIR="$root/runtime" \
-    XDG_CONFIG_HOME="$root/config" \
-    XDG_DATA_HOME="$root/data" \
-    XDG_CACHE_HOME="$root/cache" \
-    XDG_STATE_HOME="$root/state" \
+    XDG_CONFIG_HOME="$profile_root/config" \
+    XDG_DATA_HOME="$profile_root/data" \
+    XDG_CACHE_HOME="$profile_root/cache" \
+    XDG_STATE_HOME="$profile_root/state" \
     XDG_CURRENT_DESKTOP="DMS_NATIVE_OFFLINE_PROBE" \
     XDG_SESSION_TYPE="wayland" \
     WAYLAND_DISPLAY="$socket" \
@@ -125,8 +157,9 @@ exec /usr/bin/env -i \
     GSETTINGS_BACKEND="memory" \
     DMS_NATIVE_ONLINE_PROBE="$online" \
     DMS_NATIVE_PERSISTENCE_PROBE="$persistent" \
+    DMS_NATIVE_AUTH_PROBE="$auth" \
     DMS_SOCKET="" \
     NIRI_SOCKET="" \
     dbus-run-session -- \
-    timeout --signal=TERM --kill-after=3s 60s \
+    timeout --signal=TERM --kill-after=3s "$duration" \
     "$binary" --path "$harness"
