@@ -459,3 +459,21 @@ Authentication is solely a user-driven interaction in the browser.
 migration, real ChatGPT message streaming, and production installation.
 The upstream argc=1 host fix remains mandatory for native DMS mode;
 the feature stays in draft.
+
+## Interactive authentication in the genuine isolated DMS popout confirmed (2026-11-10)
+
+The user supplied a screenshot after launching `--auth-chatgpt`:
+the ChatGPT authenticated interface (Chat/Work selector, composer and
+model selector, with no login button) is rendered in the **real**
+DMS `PluginPopout`. The user explicitly reported that it worked.
+
+This is user-confirmed successful interactive login in the **isolated**
+patched Quickshell host. Authentication persistence across a **complete
+process restart** is not yet established. The user was asked to restart
+the *same* `--auth-chatgpt` mode and verify whether login survives
+without repeating credentials or 2FA. The secret-bearing auth profile
+remains outside the repo and must never be uploaded or logged.
+
+The stock Quickshell argc=0 host and production DMS plugin remain
+unchanged. The PR must remain draft until native integration and
+a supported patched-host deployment path are tested.
