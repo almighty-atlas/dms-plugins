@@ -731,3 +731,31 @@ PATH drop-in and a full native/Zen-safe plugin mode once the staged
 host is validated. Do not replace the Pacman-owned `qs` symlink or
 `quickshell`, and preserve a rollback that requires no interactive
 launcher/polkit UI.
+
+## Private host confirmed; DMS service override only previewed (2026-11-10)
+
+The user confirmed the `--staged-host-check` offline popup
+worked using the permanent user-owned `qs` shim with a
+cleaned-RUNPATH copied binary. This passes the staged-host
+runtime gate at the reported level; detailed system logging
+or complete DMS startup compatibility was not provided.
+
+The branch now offers a **read-only** `preview_dms_override.sh
+--preview` that checks the exact reviewed shim, live DMS systemd
+service and current DMS PATH, and prints the planned
+`[Service] Environment="PATH=<private bin>:<live backend PATH>"`
+configuration. The systemd service has been observed active
+under `/usr/lib/systemd/user/dms.service`, with no drop-ins.
+No service or Niri settings are modified, and no DMS process is
+restarted by the preview. User must approve a separately
+implemented activation and rollback before any live change.
+The `Environment=` directive sets a literal value; it
+does not expand `$PATH`.
+
+Rollback requirement: remove only the newly managed private-qs
+override, reload the user systemd manager and restart DMS,
+then confirm stock `/usr/bin/quickshell` runs again. Plan
+TTY-based recovery because the panel and other DMS child
+processes can be interrupted. Native webview plugin production
+integration and a functional Zen fallback remain *separate*
+upcoming changes, not implied by the host selection alone.
