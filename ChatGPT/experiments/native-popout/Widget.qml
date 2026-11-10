@@ -14,6 +14,7 @@ PluginComponent {
     // forwards DMS_NATIVE_ONLINE_PROBE=1 through its clean environment.
     readonly property bool onlineProbe: Quickshell.env("DMS_NATIVE_ONLINE_PROBE") === "1"
     readonly property bool persistenceProbe: Quickshell.env("DMS_NATIVE_PERSISTENCE_PROBE") === "1"
+    readonly property bool authProbe: Quickshell.env("DMS_NATIVE_AUTH_PROBE") === "1"
 
     // This profile belongs to the widget, not the transient popout content.
     // Qt stores its data under the isolated XDG paths of the test process.
@@ -41,13 +42,23 @@ PluginComponent {
         persistentPermissionsPolicy: WebEngineProfile.AskEveryTime
     }
 
+    // Explicit login-only profile, isolated from consent and anonymous tests.
+    WebEngineProfilePrototype {
+        id: authProfileFactory
+        storageName: "dms-chatgpt-auth-probe-v01"
+        persistentCookiesPolicy: WebEngineProfile.AllowPersistentCookies
+        persistentPermissionsPolicy: WebEngineProfile.AskEveryTime
+    }
+
     property var webProfile: null
     Component.onCompleted: {
-        if (persistenceProbe && !onlineProbe) {
+        if (((persistenceProbe || authProbe) && !onlineProbe)
+                || (persistenceProbe && authProbe)) {
             console.warn("DMS_NATIVE_PROFILE_CONFIG_INVALID");
             return;
         }
-        webProfile = persistenceProbe ? consentProfileFactory.instance()
+        webProfile = authProbe ? authProfileFactory.instance()
+                   : persistenceProbe ? consentProfileFactory.instance()
                    : onlineProbe ? publicPageProfileFactory.instance()
                    : profileFactory.instance();
         if (!webProfile)
@@ -101,8 +112,8 @@ PluginComponent {
     // PluginPopout through DMS's PopoutManager.
     popoutContent: Component {
         PopoutComponent {
-            headerText: root.persistenceProbe ? "ChatGPT · Cookie-Speichertest" : (root.onlineProbe ? "ChatGPT · Öffentliche Website (Test)" : "ChatGPT WebEngine · Offline-Test")
-            detailsText: root.persistenceProbe ? "Eigenes Testprofil mit gespeicherten Cookies. Nicht anmelden." : (root.onlineProbe ? "Separates privates Profil. Bitte nicht anmelden." : "Isolierte DMS-Testinstanz. Keine Website, keine Anmeldung.")
+            headerText: root.authProbe ? "ChatGPT · Anmeldung (isolierter Test)" : (root.persistenceProbe ? "ChatGPT · Cookie-Speichertest" : (root.onlineProbe ? "ChatGPT · Öffentliche Website (Test)" : "ChatGPT WebEngine · Offline-Test"))
+            detailsText: root.authProbe ? "Nur selbst anmelden. Keine Zugangsdaten teilen." : (root.persistenceProbe ? "Eigenes Testprofil mit gespeicherten Cookies. Nicht anmelden." : (root.onlineProbe ? "Separates privates Profil. Bitte nicht anmelden." : "Isolierte DMS-Testinstanz. Keine Website, keine Anmeldung."))
 
             Rectangle {
                 width: parent.width
