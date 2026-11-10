@@ -26,7 +26,12 @@ class HeadlessNiriFullUiTests(unittest.TestCase):
         self.assertIn('git -C "$dms_source" diff --quiet', O)
 
     def test_niri_never_imports_real_session(self):
-        self.assertIn('NIRI_BACKEND="headless"', O)
+        # Niri v26.04 has no direct NIRI_BACKEND=headless support.
+        self.assertIn('for tool in weston niri', O)
+        self.assertIn('weston --backend=headless --renderer=gl --no-config --shell=kiosk', I)
+        self.assertIn('WAYLAND_DISPLAY="$weston_name" niri --config', I)
+        self.assertIn('weston_socket="$private/runtime/$weston_name"', I)
+        self.assertNotIn('NIRI_BACKEND="headless"', O)
         self.assertIn('niri --config "$private/config/niri.kdl"', I)
         self.assertIn('DMS_SOCKET="" NOTIFY_SOCKET=""', O)
         self.assertIn('WAYLAND_DISPLAY="" NIRI_SOCKET=""', O)
@@ -52,14 +57,25 @@ class HeadlessNiriFullUiTests(unittest.TestCase):
         self.assertIn('trap cleanup EXIT', O)
 
     def test_bounded_child_shutdown_and_runtime_markers(self):
-        self.assertIn('timeout --signal=TERM --kill-after=5s 38s', O)
+        self.assertIn('timeout --signal=TERM --kill-after=5s 52s', O)
         self.assertIn('timeout --signal=TERM --kill-after=3s 16s', I)
         self.assertIn('trap cleanup_inner EXIT', I)
         self.assertIn('kill -TERM "$niri_pid"', I)
+        self.assertIn('kill -TERM "$weston_pid"', I)
+        self.assertIn('DMS_HEADLESS_WESTON_START_FAILED', I)
+        self.assertIn('DMS_HEADLESS_WESTON_PRIVATE_SOCKET_READY', I)
         self.assertIn('DMS_HEADLESS_BACKEND_READY: NOT_TESTED', I)
         self.assertIn('DMS_HEADLESS_NO_LIVE_NIRI_OR_DMS_CHANGES', I)
         self.assertIn('DMS_HEADLESS_FULL_UI_FAILED', I)
         self.assertIn('ScreencopyView is not a type', I)
+
+    def test_direct_headless_niri_regression_is_fixed(self):
+        self.assertIn('NIRI_BACKEND', I)
+        self.assertNotIn('NIRI_BACKEND=headless niri', I)
+        self.assertIn('NIRI_CONFIG="$private/config/niri.kdl"', O)
+        self.assertIn('WAYLAND_DISPLAY="" NIRI_SOCKET=""', O)
+        self.assertIn('DMS_HEADLESS_NIRI_NESTED_WITHIN_WESTON', I)
+        self.assertIn('NIRI_SOCKET="$nested_niri"', I)
 
     def test_does_not_modify_live_system_or_read_auth_profile(self):
         for script in (O, I):
