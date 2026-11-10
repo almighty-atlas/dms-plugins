@@ -92,6 +92,24 @@ class LauncherTests(IsolatedEnvironment):
                 str(theme_sync.profile_path()), "--name", "dms-chatgpt", "--new-window", "https://chatgpt.com/"])
             arrange.assert_called_once_with(WINDOW, "", "top")
 
+    def test_missing_name_option_uses_isolated_profile_pid_fallback(self):
+        process = Mock()
+        process.poll.return_value = None
+        process.pid = 123
+        generic_window = dict(WINDOW, app_id="zen")
+        with patch("launcher.niri_query", side_effect=[[], [generic_window]]), \
+                patch("launcher.find_zen", return_value="/bin/zen"), \
+                patch("launcher.command", return_value="--profile PATH --no-remote"), \
+                patch("launcher.profile_processes", side_effect=[[], [123]]), \
+                patch("launcher.spawn", return_value=process) as spawn, \
+                patch("launcher.arrange") as arrange:
+            result = launcher.launch(self.args)
+        self.assertEqual(result["status"], "opened")
+        self.assertIn("Prozess-PID", result["warning"])
+        self.assertEqual(spawn.call_args.args[0], ["/bin/zen", "--no-remote", "--profile",
+            str(theme_sync.profile_path()), "--new-window", launcher.URL])
+        arrange.assert_called_once_with(generic_window, "", "top")
+
     def test_browser_exit_zero_is_not_window_success(self):
         process = Mock()
         process.poll.return_value = 0

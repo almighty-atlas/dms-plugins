@@ -145,16 +145,26 @@ def launch(args, timeout=20):
                 return {"status": "focused", "window_id": window["id"]}
             if pids:
                 raise Failure("Isoliertes Zen läuft ohne erkanntes Fenster. Browserstart abwarten oder dieses Profil regulär beenden; keine Profilsperren löschen.")
+            # --name is optional. Many Zen builds omit it from --help. The
+            # dedicated profile and its verified process PID provide a safe
+            # identity fallback without touching the user's normal Zen profile.
             help_text = command([zen, "--help"])
-            if "--name" not in help_text and "-name" not in help_text:
-                raise Failure("Zen unterstützt --name nicht. Bestehende Sitzung als Browsermodus wählen.")
-            process = spawn([zen, "--no-remote", "--profile", str(profile), "--name", APP_ID,
-                             "--new-window", URL])
+            supports_name = "--name" in help_text or "-name" in help_text
+            argv = [zen, "--no-remote", "--profile", str(profile)]
+            if supports_name:
+                argv += ["--name", APP_ID]
+            argv += ["--new-window", URL]
+            process = spawn(argv)
             deadline = time.monotonic() + timeout
             while time.monotonic() < deadline:
                 windows = niri_query("windows")
-                if window := choose_window(windows, profile_processes(profile)):
-                    warning = ("Zen ignoriert --name. Fenster sicher über die isolierte Profil-PID erkannt; die optionale app-id-Regel greift nicht."
+                profile_pids = profile_processes(profile)
+                # The launched process is another verified identity during
+                # startup (including binary wrappers with no matching comm).
+                if process.poll() is None:
+                    profile_pids.append(process.pid)
+                if window := choose_window(windows, profile_pids):
+                    warning = ("Zen verwendet keine eigene app-id; Fenster über die isolierte Prozess-PID erkannt. Die optionale app-id-Niri-Regel greift nicht."
                                if window.get("app_id") != APP_ID else "")
                     try:
                         arrange(window, args.output, args.edge)
@@ -169,7 +179,7 @@ def launch(args, timeout=20):
                 if code is not None and code != 0:
                     raise Failure("Zen wurde beendet, ohne ein dediziertes Fenster bereitzustellen. Installation/Profil prüfen.")
                 time.sleep(0.2)
-            raise Failure("Nach 20 Sekunden kein Fenster mit app-id dms-chatgpt. Zen/Onboarding prüfen (niri msg pick-window). Kein weiterer Start bei laufendem Profil.")
+            raise Failure("Nach 20 Sekunden kein isoliertes Zen-Fenster erkannt. Zen/Onboarding und Profilprozess prüfen (niri msg pick-window). Kein weiterer Start bei laufendem Profil.")
 
         # Optional fallbacks: never modify or theme the normal browser profile.
         can_query = bool(shutil.which("niri") and os.environ.get("NIRI_SOCKET"))

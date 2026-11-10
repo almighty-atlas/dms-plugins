@@ -95,8 +95,11 @@ supported by Zen. Zen owns cookies, storage and session persistence. The plugin
 never extracts, copies or interprets them. Your normal Zen profile is not opened
 for writing by the plugin, registered as this profile or styled.
 
-Launch arguments: `--no-remote --profile <fixed-plugin-profile> --name dms-chatgpt
---new-window https://chatgpt.com/`. No Chromium `--app`, kiosk or full-screen flag.
+Launch arguments: `--no-remote --profile <fixed-plugin-profile> --new-window
+https://chatgpt.com/`; `--name dms-chatgpt` is added **only if advertised** by
+the installed Zen executable. If it isn't offered, the launcher tries to
+identify the window via the dedicated profile process PID instead. No Chromium
+`--app`, kiosk or full-screen flag.
 Zen's documented **Compact Mode** is the supported app-like alternative; no
 reliable, documented standalone Zen app CLI was found in the inspected docs/source.
 The profile has separate preferences, not a modified global `profiles.ini`.
@@ -197,8 +200,10 @@ For correct initial floating before the launcher observes the window, optionally
 add the single block from [niri-window-rule.kdl.example](niri-window-rule.kdl.example)
 **once**, or include a copied file from your own config. Validate with
 `niri validate` before accepting it. It matches only `^dms-chatgpt$`, never all Zen
-windows. If Zen ignores `--name`, this optional rule won't match, but the verified
-PID-based runtime integration still works. Check locally using
+windows. If Zen omits or ignores `--name`, this optional rule won't match; the launcher
+instead attempts PID-based identity. This must be confirmed on the actual
+desktop. If the compositor exposes a different PID, the test will stop with a
+diagnostic rather than guessing from a ChatGPT window title. Check locally using
 `niri msg pick-window`; don't upload window listings with private titles.
 Rollback: remove only the added block/include. Never replace `config.kdl`.
 
