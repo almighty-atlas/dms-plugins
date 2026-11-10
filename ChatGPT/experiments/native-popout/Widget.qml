@@ -2,12 +2,17 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtWebEngine
+import Quickshell
 import qs.Modules.Plugins
 
 // EXPERIMENT ONLY: requires the isolated argc=1 Quickshell host.
 // Do not link this component into the installed DMS plugin.
 PluginComponent {
     id: root
+
+    // OFFLINE by default. Only the runner's explicit --public-chatgpt mode
+    // forwards DMS_NATIVE_ONLINE_PROBE=1 through its clean environment.
+    readonly property bool onlineProbe: Quickshell.env("DMS_NATIVE_ONLINE_PROBE") === "1"
 
     // This profile belongs to the widget, not the transient popout content.
     // Qt stores its data under the isolated XDG paths of the test process.
@@ -19,9 +24,16 @@ PluginComponent {
         persistentPermissionsPolicy: WebEngineProfile.AskEveryTime
     }
 
+    // Online discovery is deliberately off-the-record: no storageName,
+    // no persisted cookies or account authentication between runs.
+    WebEngineProfilePrototype {
+        id: publicPageProfileFactory
+        persistentPermissionsPolicy: WebEngineProfile.AskEveryTime
+    }
+
     property var webProfile: null
     Component.onCompleted: {
-        webProfile = profileFactory.instance();
+        webProfile = onlineProbe ? publicPageProfileFactory.instance() : profileFactory.instance();
         if (!webProfile)
             console.warn("DMS_NATIVE_PROFILE_UNAVAILABLE");
     }
@@ -73,8 +85,8 @@ PluginComponent {
     // PluginPopout through DMS's PopoutManager.
     popoutContent: Component {
         PopoutComponent {
-            headerText: "ChatGPT WebEngine · Offline-Test"
-            detailsText: "Isolierte DMS-Testinstanz. Keine Website, keine Anmeldung."
+            headerText: root.onlineProbe ? "ChatGPT · Öffentliche Website (Test)" : "ChatGPT WebEngine · Offline-Test"
+            detailsText: root.onlineProbe ? "Separates privates Profil. Bitte nicht anmelden." : "Isolierte DMS-Testinstanz. Keine Website, keine Anmeldung."
 
             Rectangle {
                 width: parent.width
@@ -90,7 +102,11 @@ PluginComponent {
                             profile: root.webProfile
                             Component.onCompleted: {
                                 console.log("DMS_NATIVE_WEBVIEW_CREATED");
-                                loadHtml(
+                                if (root.onlineProbe) {
+                                    console.log("DMS_NATIVE_PUBLIC_SITE_REQUESTED");
+                                    url = "https://chatgpt.com/";
+                                } else {
+                                    loadHtml(
                                 "<!doctype html><html><meta charset='utf-8'>" +
                                 "<body style='background:#1e1e2e;color:#cdd6f4;" +
                                 "font:18px sans-serif;padding:24px'>" +
@@ -100,14 +116,19 @@ PluginComponent {
                                 "<input type='text' placeholder='Type test' " +
                                 "style='font:18px sans-serif;padding:12px;width:85%'>" +
                                 "</body></html>"
-                                );
+                                    );
+                                }
                             }
                             Component.onDestruction: console.log("DMS_NATIVE_WEBVIEW_DESTROYED")
                             onLoadingChanged: function(info) {
                                 if (info.status === WebEngineView.LoadSucceededStatus)
-                                    console.log("DMS_NATIVE_POPOUT_HTML_LOADED")
+                                    console.log(root.onlineProbe ?
+                                        "DMS_NATIVE_PUBLIC_SITE_LOAD_SUCCEEDED" :
+                                        "DMS_NATIVE_POPOUT_HTML_LOADED");
                                 else if (info.status === WebEngineView.LoadFailedStatus)
-                                    console.warn("DMS_NATIVE_POPOUT_HTML_FAILED")
+                                    console.warn(root.onlineProbe ?
+                                        "DMS_NATIVE_PUBLIC_SITE_LOAD_FAILED" :
+                                        "DMS_NATIVE_POPOUT_HTML_FAILED");
                             }
                             onPermissionRequested: function(permission) {
                                 permission.deny();

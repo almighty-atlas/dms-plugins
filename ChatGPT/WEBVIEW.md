@@ -400,3 +400,22 @@ The oversized separate test-pill `FloatingWindow` now gets explicit
 markers were added for the next runtime test. Profile continuity
 and DOM/page continuity must be measured separately. The experiment
 remains offline and outside the live DMS installation.
+
+## DMS popup lifecycle user test passed; public-page gate staged
+
+On 2026-11-10 the user reported that the follow-up native DMS popup
+test worked in full. This includes click-outside close, reopening,
+retained test draft, Escape close and the updated compact test pill,
+as requested in the preceding test instructions. The reply included
+no fresh terminal lifecycle log, so exact WebEngineView creation and
+destruction counts remain unknown. This is not evidence that real
+ChatGPT streaming continues while hidden.
+
+A new **explicit** `--public-chatgpt` mode has been staged for the
+isolated native popup runner. The default remains offline; signed-out
+online mode uses Qt 6.11 `WebEngineProfilePrototype` without a
+`storageName` for an **off-the-record**, ephemeral profile; the only
+direct navigation target is `https://chatgpt.com/`. No login, account
+data, production DMS settings or installation are involved. Online
+DMS popup runtime has **not** yet been performed. User must refrain
+from signing in until cookie/session behavior is separately reviewed.

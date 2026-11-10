@@ -43,11 +43,21 @@ class NativeRuntimeIsolationTests(unittest.TestCase):
         self.assertIn('readlink "$qml_root/DCommon"', SCRIPT)
         self.assertIn('"$qml_root/DCommon/Widgets"', SCRIPT)
 
-    def test_explicit_offline_only(self):
+    def test_offline_default_and_explicit_public_site_only(self):
         widget = (ROOT / "Widget.qml").read_text()
         self.assertIn("loadHtml(", widget)
-        self.assertNotIn("https://", widget)
+        self.assertIn('onlineProbe: Quickshell.env("DMS_NATIVE_ONLINE_PROBE") === "1"', widget)
+        self.assertIn('if (root.onlineProbe)', widget)
+        self.assertIn('url = "https://chatgpt.com/";', widget)
+        self.assertEqual(widget.count("https://"), 1)
         self.assertNotIn("http://", widget)
+        self.assertIn('if [[ "$#" == 0 ]]', SCRIPT)
+        self.assertIn('"--public-chatgpt"', SCRIPT)
+        self.assertIn('DMS_NATIVE_ONLINE_PROBE="$online"', SCRIPT)
+        self.assertIn('DO NOT SIGN IN', SCRIPT)
+        self.assertIn('dbus-run-session --', SCRIPT)
+        self.assertIn('DMS_SOCKET=""', SCRIPT)
+        self.assertIn('NIRI_SOCKET=""', SCRIPT)
 
 if __name__ == "__main__":
     unittest.main()

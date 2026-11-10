@@ -1,8 +1,18 @@
 #!/usr/bin/env bash
-# OFFLINE native DMS PluginPopout probe in a private process and XDG state.
-# No browser login, service connection, package installation or DMS restart.
+# Native DMS PluginPopout probe (offline default, public site explicit).
+# No credential interaction, package installation, DMS connection or restart.
 set -euo pipefail
 umask 077
+
+online=0
+if [[ "$#" == 0 ]]; then
+    : # default: local HTML only
+elif [[ "$#" == 1 && "$1" == "--public-chatgpt" ]]; then
+    online=1
+else
+    echo "Usage: run_native_popout.sh [--public-chatgpt]" >&2
+    exit 2
+fi
 
 root=/tmp/dms-chatgpt-native-v02
 qml_root="$root/dux-shell/quickshell"
@@ -79,9 +89,14 @@ for dir in home config data cache state runtime; do
     chmod 700 "$root/$dir"
 done
 
-echo "DMS_NATIVE_TEST_STARTED: real PluginPopout; offline HTML only"
+if [[ "$online" == 1 ]]; then
+    echo "DMS_NATIVE_PUBLIC_TEST: opening https://chatgpt.com/; DO NOT SIGN IN"
+    echo "DMS_NATIVE_PUBLIC_TEST: off-the-record WebEngine profile"
+else
+    echo "DMS_NATIVE_TEST_STARTED: real PluginPopout; offline HTML only"
+    echo "DMS_NATIVE_TEST_INSTRUCTIONS: click pill, type test, dismiss, reopen"
+fi
 echo "DMS_NATIVE_ISOLATION: private HOME, XDG and session DBus; DMS_SOCKET and NIRI_SOCKET blank"
-echo "DMS_NATIVE_TEST_INSTRUCTIONS: click pill, type test, dismiss, reopen"
 echo "DMS_NATIVE_AUTO_STOP: 60 seconds"
 # The compositor socket is deliberately shared so Niri can show the test
 # window; other user runtime sockets remain inaccessible via the private
@@ -100,6 +115,7 @@ exec /usr/bin/env -i \
     WAYLAND_DISPLAY="$socket" \
     QT_QPA_PLATFORM="wayland" \
     GSETTINGS_BACKEND="memory" \
+    DMS_NATIVE_ONLINE_PROBE="$online" \
     DMS_SOCKET="" \
     NIRI_SOCKET="" \
     dbus-run-session -- \

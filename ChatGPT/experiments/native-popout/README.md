@@ -197,3 +197,36 @@ Next test: click pill, type `draft123`, click outside, reopen and
 check draft preservation. Then test Escape. Compare markers to
 determine whether close/reopen recreates `WebEngineView`.
 No online navigation, account login or production plugin changes.
+
+## Lifecycle passed; public ChatGPT page optional (2026-11-10)
+
+After the 420×95 test-pill geometry and lifecycle tracing update, the
+user reported **all tests work**: opening, typing, click-outside
+dismissal, reopening, draft preservation and Escape. This is
+user-reported; no second terminal lifecycle log was provided, so
+we have **not** independently verified how many WebEngineView objects
+survive or are recreated. Do not infer that a chat response can
+continue while the popup is closed.
+
+The next gate loads the **public, signed-out ChatGPT homepage** in the
+**real** DMS `PluginPopout` with an explicit opt-in flag:
+
+```sh
+bash ChatGPT/experiments/native-popout/run_native_popout.sh --public-chatgpt
+```
+
+Default execution (without arguments) continues to load **only local
+offline HTML**. The opt-in mode forwards an explicit flag through
+the private `env -i` session; it uses a **separate off-the-record Qt
+WebEngine profile** (no `storageName`, so cookies/cache are in memory)
+and does not reuse the offline persistent test profile or Zen cookies.
+Only `https://chatgpt.com/` is directly requested by the experiment
+(the website itself can request associated resources and redirects).
+
+**Do not sign in, send messages, upload files or grant permissions in
+this test.** Page-load success does not guarantee usable website content;
+inspect the screenshot for any Cloudflare challenges and visible rendering.
+The runner remains bounded to 60 seconds and isolated from the live
+DMS backend; it is not a kernel sandbox. The Qt WebEngine
+Chromium sandbox remains enabled. Experimental production activation
+is still blocked.
