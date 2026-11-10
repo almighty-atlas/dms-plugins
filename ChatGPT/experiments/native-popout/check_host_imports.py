@@ -12,7 +12,7 @@ import sys
 
 DMS_ROOT = Path("/tmp/dms-chatgpt-native-v02/dux-shell/quickshell")
 CMAKE_CACHE = Path("/tmp/dms-chatgpt-qs-v02-argc1/build-layer/CMakeCache.txt")
-IMPORT_RE = re.compile(r"^\s*import\s+(Quickshell(?:\.[a-zA-Z_][a-zA-Z_0-9]*)+)\b", re.M)
+IMPORT_RE = re.compile(r"^\s*import\s+(Quickshell(?:\.[a-zA-Z_][a-zA-Z_0-9]*)*)\b", re.M)
 BOOL_RE = re.compile(r"^([A-Z][A-Z0-9_]*):BOOL=(ON|OFF|TRUE|FALSE|1|0)$", re.M)
 
 # Feature names correspond to upstream Quickshell CMakeLists.txt. Modules
