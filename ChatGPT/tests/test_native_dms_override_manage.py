@@ -14,6 +14,7 @@ class ManagedDmsOverrideTests(unittest.TestCase):
             with self.subTest(path=path.name):
                 subprocess.run(["bash", "-n", str(path)], check=True)
         self.assertIn('mode="${1:-}"', SH)
+        self.assertIn("DMS_SWITCH_BLOCKED: retired candidate was built with SCREENCOPY=OFF", SH)
         for mode in ('"--activate"', '"--confirm"', '"--rollback"'):
             self.assertIn(mode, SH)
         self.assertIn('if [[ ! -t 0 ]]', SH)
