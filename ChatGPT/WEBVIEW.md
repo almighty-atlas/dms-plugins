@@ -119,3 +119,11 @@ desktop browsers; test features, don't infer them from a module import.
   (off-the-record defaults, storage, cookies and profile prototype recommendation).
 - [Qt WebEngine platform / sandbox notes](https://doc.qt.io/qt-6/qtwebengine-platform-notes.html).
 - [Qt WebEngine Qt6 changes](https://doc.qt.io/qt-6/qtwebengine-changes-qt6.html).
+
+## First opt-in v0.2 feasibility probe
+
+A deliberately separate, offline C++/QML renderer and read-only diagnostic are
+now available in [probes/webengine](probes/webengine/README.md). They do not
+change the v0.1 production plugin or registry manifest. A renderer success on
+CachyOS proves only that an independently initialized Qt process works; the
+host-initialization prerequisite for a true DMS popout remains unresolved.
