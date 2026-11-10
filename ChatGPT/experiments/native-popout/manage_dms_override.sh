@@ -66,6 +66,7 @@ rollback() {
     systemctl --user daemon-reload
     systemctl --user stop "$timer" >/dev/null 2>&1 || true
     systemctl --user restart dms.service
+    rm -- "$marker"
     echo "DMS_ROLLBACK_APPLIED: original DMS service startup restored"
     echo "DMS_ROLLBACK_VERIFY: readlink -f /proc/<new-qs-pid>/exe"
 }
@@ -149,6 +150,13 @@ expected_ini=$(printf '[Service]\nEnvironment="PATH=%s:%s"\n' "$bin" "$live_path
 shown_ini=$(printf '%s\n' "$preview_out" | sed -n '/^PROPOSED_CONTENT_BEGIN$/,/^PROPOSED_CONTENT_END$/{/^PROPOSED_CONTENT_BEGIN$/d;/^PROPOSED_CONTENT_END$/d;p;}')
 if [[ "$shown_ini" != "$expected_ini" ]]; then
     echo "DMS_SWITCH_BLOCKED: proposed drop-in differs from preflight" >&2
+    exit 1
+fi
+# A terminal/process inside dms.service could be killed by its own
+# restart. Require the switch to be launched from a separate cgroup/TTY.
+if [[ -r "/proc/$/cgroup" ]] &&
+   grep -Fq "/dms.service" "/proc/$/cgroup"; then
+    echo "DMS_SWITCH_BLOCKED: run from a terminal outside the DMS service cgroup" >&2
     exit 1
 fi
 if [[ ! -t 0 ]]; then
