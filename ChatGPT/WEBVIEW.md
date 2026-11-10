@@ -555,3 +555,20 @@ remains unchanged. Native plugin mode requires explicit feature
 gating, safe fallback, verified QML-module compatibility, startup
 and update integration, rollback, and user approval before any
 system changes.
+
+## Final host prerequisite: installed-versus-patched Quickshell preflight
+
+An opt-in `host_preflight.sh` now compares the installed and isolated
+patched Quickshell executables without replacing anything. By default,
+it reports only package identities and binary digests. With
+`--probe`, it executes **only** the previously-reviewed,
+WebEngine-free `QuickshellArgsProbe.qml`, separately in each host
+with a six-second timeout, and emits safe argc status markers.
+The optional runtime probes do not touch ChatGPT authentication.
+
+The user-confirmed popup tests do not establish compatibility of
+the *installed* host; the previously observed `argc=0` was fatal
+for WebEngine. There is no sanctioned automatic upgrade/patch
+mechanism yet. A correct production path must be reversible, verify
+the fully featured Qt/QML host and provide safe Zen fallback under
+the installed stock binary. No changes to release v0.1.0 are made.

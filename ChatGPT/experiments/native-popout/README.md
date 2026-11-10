@@ -301,3 +301,38 @@ To end the experiment after testing, first close all test windows,
 then remove the dedicated auth-test directory **only if you no longer
 need its saved session**. Never delete the production DMS or Zen data
 as part of this cleanup.
+
+## Installed-host compatibility preflight (read-only by default)
+
+After the user confirmed ChatGPT reply continuation across a hidden
+**real DMS popup**, the remaining release blocker is the host:
+the system-installed Quickshell was earlier verified as `argc=0`;
+only the isolated, patched `build-dms` host was confirmed as
+`argc=1`. Upstream tracking: quickshell
+[#1393](https://github.com/quickshell-mirror/quickshell/issues/1393)
+and [#1412](https://github.com/quickshell-mirror/quickshell/issues/1412).
+
+The non-destructive host preflight compares package IDs and executable
+hashes without starting a shell:
+
+```sh
+bash ChatGPT/experiments/native-popout/host_preflight.sh
+```
+
+To safely **re-test** the real argc behavior of each host, use the
+explicit `--probe` argument. It launches the already-reviewed,
+WebEngine-free `QuickshellArgsProbe.qml` under an independent
+6-second timeout for each binary and prints **only** the marker
+`ZERO_UNSAFE_FOR_WEBENGINE`, `NONZERO_WEBENGINE_PREREQUISITE_MET`
+or `INCONCLUSIVE`:
+
+```sh
+bash ChatGPT/experiments/native-popout/host_preflight.sh --probe
+```
+
+Neither mode modifies DMS/Quickshell packages, installed plugins,
+session profiles, the DMS daemon or the running desktop session.
+The explicit probe briefly launches a separate Quickshell process,
+never a WebEngineView. A nonzero argc is **necessary but insufficient**
+for native embedding; QML modules and compatibility must also pass.
+Do not enable a production native widget on an unpatched host.
